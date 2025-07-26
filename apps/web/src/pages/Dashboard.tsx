@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { 
   Plus, 
   Calendar, 
@@ -8,9 +9,12 @@ import {
   Users,
   TrendingUp,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Check,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 
 const quickActions = [
   {
@@ -66,7 +70,7 @@ const statusCards = [
   },
 ];
 
-const recentActivity = [
+const getRecentActivity = (patientName: string) => [
   {
     time: '30 minutes ago',
     title: 'Morning medications given',
@@ -75,7 +79,7 @@ const recentActivity = [
   {
     time: '8:00 AM',
     title: 'Good morning mood',
-    description: 'Mom woke up refreshed, recognized everyone, ate full breakfast',
+    description: `${patientName} woke up refreshed, recognized everyone, ate full breakfast`,
   },
   {
     time: 'Yesterday, 7:30 PM',
@@ -89,37 +93,74 @@ const recentActivity = [
   },
 ];
 
-const todaysMedications = [
-  {
-    time: '8:00 AM',
-    name: 'Aricept',
-    dose: '10mg - Memory support',
-    status: 'given',
-  },
-  {
-    time: '8:00 AM',
-    name: 'Metformin',
-    dose: '500mg - Diabetes',
-    status: 'given',
-  },
-  {
-    time: '2:00 PM',
-    name: 'Lisinopril',
-    dose: '10mg - Blood pressure',
-    status: 'pending',
-  },
-  {
-    time: '8:00 PM',
-    name: 'Metformin',
-    dose: '500mg - Diabetes',
-    status: 'pending',
-  },
-];
+interface TodayMedication {
+  medicationId: string;
+  medicationName: string;
+  dosage: string;
+  scheduledTime: string;
+  timeString: string;
+  status: 'pending' | 'given' | 'missed' | 'refused';
+  givenTime?: string;
+  givenBy?: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
+interface FamilyData {
+  families: Array<{
+    id: string;
+    name: string;
+    role: string;
+    patient: {
+      id: string;
+      firstName: string;
+      lastName: string;
+    };
+  }>;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+}
 
 export function Dashboard() {
+  const [familyData, setFamilyData] = useState<FamilyData | null>(null);
+  const [userName, setUserName] = useState('');
+  const [todaysMedications, setTodaysMedications] = useState<TodayMedication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFamilyData = async () => {
+      try {
+        const response = await api.get<FamilyData>('/api/v1/families');
+        setFamilyData(response.data);
+        
+        // Set user name from the response
+        if (response.data.user) {
+          setUserName(response.data.user.firstName || 'there');
+        }
+        
+        // Fetch today's medications if we have a patient
+        if (response.data.families.length > 0) {
+          const patientId = response.data.families[0].patient.id;
+          const medsResponse = await api.get(`/api/v1/patients/${patientId}/medications/today`);
+          setTodaysMedications(medsResponse.data.schedule);
+        }
+      } catch (error) {
+        console.error('Error fetching family data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFamilyData();
+  }, []);
+
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good morning' : currentHour < 17 ? 'Good afternoon' : 'Good evening';
-  const userName = 'Sarah'; // This would come from user context
   const date = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
     year: 'numeric', 
@@ -127,13 +168,43 @@ export function Dashboard() {
     day: 'numeric' 
   });
 
+  const patientName = familyData?.families[0]?.patient?.firstName || 'your loved one';
+
+  const handleMedicationLog = async (medication: TodayMedication, status: 'given' | 'missed' | 'refused') => {
+    try {
+      await api.post(`/api/v1/medications/${medication.medicationId}/log`, {
+        scheduledTime: medication.scheduledTime,
+        status,
+      });
+      
+      // Refresh the medications
+      if (familyData?.families[0]?.patient?.id) {
+        const medsResponse = await api.get(`/api/v1/patients/${familyData.families[0].patient.id}/medications/today`);
+        setTodaysMedications(medsResponse.data.schedule);
+      }
+    } catch (error: any) {
+      console.error('Error logging medication:', error);
+      if (error.response?.data) {
+        console.error('Error details:', error.response.data);
+      }
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Dashboard Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">{greeting}, {userName}</h1>
         <p className="mt-1 text-lg text-gray-600">
-          {date} • Mom had a good night
+          {date} • {patientName} had a good night
         </p>
       </div>
 
@@ -196,7 +267,7 @@ export function Dashboard() {
               
               {/* Timeline items */}
               <div className="space-y-6">
-                {recentActivity.map((item, index) => (
+                {getRecentActivity(patientName).map((item, index) => (
                   <div key={index} className="relative flex gap-4">
                     <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
                       <div className="w-4 h-4 bg-white rounded-full border-[3px] border-primary-500 z-10" />
@@ -219,32 +290,73 @@ export function Dashboard() {
         <div className="card">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Today's Medications</h2>
-            <a href="#" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+            <a href="/medications" className="text-sm font-medium text-primary-600 hover:text-primary-700">
               Manage →
             </a>
           </div>
           
           <div className="space-y-3">
-            {todaysMedications.map((med, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 cursor-pointer transition-colors"
-              >
-                <div className="text-sm font-semibold text-primary-600 min-w-[60px]">
-                  {med.time}
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-gray-900 text-sm">{med.name}</div>
-                  <div className="text-xs text-gray-500">{med.dose}</div>
-                </div>
-                <div className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center',
-                  med.status === 'given' ? 'bg-success text-white' : 'bg-gray-200'
-                )}>
-                  {med.status === 'given' && <CheckCircle className="h-5 w-5" />}
-                </div>
-              </div>
-            ))}
+            {todaysMedications.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No medications scheduled today</p>
+            ) : (
+              todaysMedications.map((med) => {
+                const isPastTime = new Date(med.scheduledTime) <= new Date();
+                const canLog = med.status === 'pending' && isPastTime;
+                
+                return (
+                  <div
+                    key={`${med.medicationId}-${med.scheduledTime}`}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg transition-colors",
+                      med.status === 'given' && "bg-green-50",
+                      med.status === 'pending' && "bg-gray-50 hover:bg-primary-50",
+                      (med.status === 'missed' || med.status === 'refused') && "bg-red-50"
+                    )}
+                  >
+                    <div className={cn(
+                      "text-sm font-semibold min-w-[60px]",
+                      med.status === 'given' && "text-green-700",
+                      med.status === 'pending' && "text-primary-600",
+                      (med.status === 'missed' || med.status === 'refused') && "text-red-700"
+                    )}>
+                      {med.timeString}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 text-sm">{med.medicationName}</div>
+                      <div className="text-xs text-gray-500">{med.dosage}</div>
+                    </div>
+                    {canLog ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleMedicationLog(med, 'given')}
+                          className="p-1.5 bg-success text-white rounded hover:bg-green-700 transition-colors"
+                          title="Mark as given"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleMedicationLog(med, 'missed')}
+                          className="p-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          title="Mark as missed"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className={cn(
+                        'w-8 h-8 rounded-full flex items-center justify-center',
+                        med.status === 'given' && 'bg-success text-white',
+                        med.status === 'pending' && 'bg-gray-200',
+                        (med.status === 'missed' || med.status === 'refused') && 'bg-red-600 text-white'
+                      )}>
+                        {med.status === 'given' && <CheckCircle className="h-5 w-5" />}
+                        {(med.status === 'missed' || med.status === 'refused') && <X className="h-5 w-5" />}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>

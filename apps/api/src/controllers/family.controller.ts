@@ -7,6 +7,7 @@ import { generateInviteToken } from '../utils/tokens';
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
+import { clerkClient } from '@clerk/express';
 
 // Validation schemas
 const createFamilySchema = z.object({
@@ -16,6 +17,8 @@ const createFamilySchema = z.object({
   patientDateOfBirth: z.string().datetime(),
   patientGender: z.enum(['male', 'female', 'other']),
   relationship: z.string().min(1).max(50),
+  userFirstName: z.string().min(1).max(50).optional(),
+  userLastName: z.string().min(1).max(50).optional(),
 });
 
 const inviteMemberSchema = z.object({
@@ -32,7 +35,7 @@ export class FamilyController {
       throw new ApiError(ErrorCodes.VALIDATION_ERROR, 'Invalid input', 400, validation.error.errors);
     }
 
-    const { familyName, patientFirstName, patientLastName, patientDateOfBirth, patientGender, relationship } = validation.data;
+    const { familyName, patientFirstName, patientLastName, patientDateOfBirth, patientGender, relationship, userFirstName, userLastName } = validation.data;
     const userId = req.auth!.userId;
 
     // Check if user already has a family
@@ -43,6 +46,14 @@ export class FamilyController {
 
     if (existingUser?.familyMembers.length) {
       throw new ApiError(ErrorCodes.CONFLICT, 'User already belongs to a family', 409);
+    }
+
+    // Get user data from Clerk
+    const clerkUser = await clerkClient.users.getUser(userId);
+    const userEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId)?.emailAddress;
+    
+    if (!userEmail) {
+      throw new ApiError(ErrorCodes.INVALID_REQUEST, 'User email not found', 400);
     }
 
     // Create family, patient, and link user in a transaction
@@ -69,15 +80,15 @@ export class FamilyController {
       const user = await tx.user.upsert({
         where: { clerkId: userId },
         update: {
-          email: req.auth!.sessionClaims?.email as string,
-          firstName: req.auth!.sessionClaims?.firstName as string,
-          lastName: req.auth!.sessionClaims?.lastName as string,
+          email: userEmail,
+          firstName: userFirstName || clerkUser.firstName || '',
+          lastName: userLastName || clerkUser.lastName || '',
         },
         create: {
           clerkId: userId,
-          email: req.auth!.sessionClaims?.email as string,
-          firstName: req.auth!.sessionClaims?.firstName as string,
-          lastName: req.auth!.sessionClaims?.lastName as string,
+          email: userEmail,
+          firstName: userFirstName || clerkUser.firstName || '',
+          lastName: userLastName || clerkUser.lastName || '',
         },
       });
 
@@ -111,26 +122,30 @@ export class FamilyController {
 
   // Get user's families
   async getUserFamilies(req: AuthRequest, res: Response) {
-    const userId = req.auth!.userId;
+    try {
+      console.log('getUserFamilies - auth:', req.auth);
+      const userId = req.auth!.userId;
+      console.log('getUserFamilies - userId:', userId);
 
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      include: {
-        familyMembers: {
-          where: { isActive: true },
-          include: {
-            family: {
-              include: {
-                patient: true,
-                members: {
-                  where: { isActive: true },
-                  include: {
-                    user: {
-                      select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
+      const user = await prisma.user.findUnique({
+        where: { clerkId: userId },
+        include: {
+          familyMembers: {
+            where: { isActive: true },
+            include: {
+              family: {
+                include: {
+                  patient: true,
+                  members: {
+                    where: { isActive: true },
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          firstName: true,
+                          lastName: true,
+                          email: true,
+                        },
                       },
                     },
                   },
@@ -139,12 +154,11 @@ export class FamilyController {
             },
           },
         },
-      },
-    });
+      });
 
-    if (!user) {
-      return res.json({ families: [] });
-    }
+      if (!user) {
+        return res.json({ families: [] });
+      }
 
     const families = user.familyMembers.map((fm) => ({
       id: fm.family.id,
@@ -158,7 +172,19 @@ export class FamilyController {
       memberCount: fm.family.members.length,
     }));
 
-    res.json({ families });
+    res.json({ 
+      families,
+      user: user ? {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      } : null,
+    });
+    } catch (error) {
+      console.error('Error getting user families:', error);
+      throw error;
+    }
   }
 
   // Send invitation to join family
@@ -262,6 +288,75 @@ export class FamilyController {
     });
   }
 
+  // Get family details with members
+  async getFamilyDetails(req: AuthRequest, res: Response) {
+    const { familyId } = req.params;
+    const userId = req.auth!.userId;
+
+    // Verify user has access to this family
+    const member = await prisma.familyMember.findFirst({
+      where: {
+        familyId,
+        user: { clerkId: userId },
+        isActive: true,
+      },
+    });
+
+    if (!member) {
+      throw new ApiError(ErrorCodes.FORBIDDEN, 'Access denied', 403);
+    }
+
+    const family = await prisma.family.findUnique({
+      where: { id: familyId },
+      include: {
+        patient: true,
+        members: {
+          where: { isActive: true },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!family) {
+      throw new ApiError(ErrorCodes.NOT_FOUND, 'Family not found', 404);
+    }
+
+    const members = family.members.map((fm) => ({
+      id: fm.user.id,
+      firstName: fm.user.firstName,
+      lastName: fm.user.lastName,
+      email: fm.user.email,
+      role: fm.role,
+      relationship: fm.relationship,
+      joinedAt: fm.joinedAt,
+    }));
+
+    res.json({
+      family: {
+        id: family.id,
+        name: family.name,
+        patient: {
+          id: family.patient!.id,
+          firstName: family.patient!.firstName,
+          lastName: family.patient!.lastName,
+          dateOfBirth: family.patient!.dateOfBirth,
+          gender: family.patient!.gender,
+        },
+        members,
+        currentUserRole: member.role,
+      },
+    });
+  }
+
   // Get pending invitations for a family
   async getFamilyInvitations(req: AuthRequest, res: Response) {
     const { familyId } = req.params;
@@ -335,6 +430,14 @@ export class FamilyController {
       throw new ApiError(ErrorCodes.INVALID_REQUEST, 'Invitation has expired', 400);
     }
 
+    // Get user data from Clerk
+    const clerkUser = await clerkClient.users.getUser(userId);
+    const userEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId)?.emailAddress;
+    
+    if (!userEmail) {
+      throw new ApiError(ErrorCodes.INVALID_REQUEST, 'User email not found', 400);
+    }
+
     // Create or update user and add to family
     const result = await prisma.$transaction(async (tx) => {
       // Update invitation status
@@ -350,15 +453,15 @@ export class FamilyController {
       const user = await tx.user.upsert({
         where: { clerkId: userId },
         update: {
-          email: req.auth!.sessionClaims?.email as string,
-          firstName: req.auth!.sessionClaims?.firstName as string,
-          lastName: req.auth!.sessionClaims?.lastName as string,
+          email: userEmail,
+          firstName: clerkUser.firstName || '',
+          lastName: clerkUser.lastName || '',
         },
         create: {
           clerkId: userId,
-          email: req.auth!.sessionClaims?.email as string,
-          firstName: req.auth!.sessionClaims?.firstName as string,
-          lastName: req.auth!.sessionClaims?.lastName as string,
+          email: userEmail,
+          firstName: clerkUser.firstName || '',
+          lastName: clerkUser.lastName || '',
         },
       });
 

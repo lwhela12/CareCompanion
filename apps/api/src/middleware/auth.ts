@@ -16,8 +16,8 @@ declare global {
       };
       user?: {
         id: string;
-        familyId: string;
-        role: string;
+        familyId?: string;
+        role?: string;
         email: string;
         name: string;
       };
@@ -49,31 +49,38 @@ export async function loadUser(req: Request, res: Response, next: NextFunction) 
   }
 
   try {
-    // Get user from Clerk
-    const clerkUser = await clerkClient.users.getUser(req.auth.userId);
-    
-    // Find user in database
+    // Find user in database using clerkId
     const user = await prisma.user.findUnique({
-      where: { authProviderId: clerkUser.id },
-      include: { family: true },
+      where: { clerkId: req.auth.userId },
+      include: { 
+        familyMembers: {
+          where: { isActive: true },
+          include: {
+            family: true
+          }
+        }
+      },
     });
 
+    // User might not exist yet (new user who hasn't onboarded)
     if (!user) {
-      return next(new ApiError(
-        ErrorCodes.NOT_FOUND,
-        'User not found',
-        404
-      ));
+      // For new users, we'll let them through to create their family
+      next();
+      return;
     }
 
-    // Attach user to request
-    req.user = {
-      id: user.id,
-      familyId: user.familyId,
-      role: user.role,
-      email: user.email,
-      name: user.name,
-    };
+    // If user has family memberships, attach the first active one
+    // In the future, we might want to handle multiple families
+    if (user.familyMembers.length > 0) {
+      const familyMember = user.familyMembers[0];
+      req.user = {
+        id: user.id,
+        familyId: familyMember.familyId,
+        role: familyMember.role,
+        email: user.email,
+        name: `${user.firstName} ${user.lastName}`,
+      };
+    }
 
     next();
   } catch (error) {

@@ -1,10 +1,13 @@
 export * from '@prisma/client';
 export { PrismaClient } from '@prisma/client';
+export { prisma } from './client';
 
 // Re-export commonly used types
 export type {
   Family,
   User,
+  FamilyMember,
+  Invitation,
   Patient,
   JournalEntry,
   Medication,
@@ -15,8 +18,11 @@ export type {
   ItemLocation,
   Insight,
   AuditLog,
-  UserRole,
-  PrivacyLevel,
+  FamilyRole,
+  InvitationStatus,
+  JournalSentiment,
+  CareTaskPriority,
+  CareTaskStatus,
   MedicationStatus,
   DocumentType,
   ParsingStatus,

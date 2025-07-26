@@ -8,15 +8,63 @@ const router = Router();
 router.use(authenticate);
 
 // Family management
-router.post('/families', familyController.createFamily);
-router.get('/families', familyController.getUserFamilies);
+router.post('/families', async (req, res, next) => {
+  try {
+    await familyController.createFamily(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/families', async (req, res, next) => {
+  try {
+    await familyController.getUserFamilies(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get specific family details with members
+router.get('/families/:familyId', async (req, res, next) => {
+  try {
+    await familyController.getFamilyDetails(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Invitation management
-router.post('/families/:familyId/invitations', familyController.inviteMember);
-router.get('/families/:familyId/invitations', familyController.getFamilyInvitations);
-router.delete('/families/:familyId/invitations/:invitationId', familyController.cancelInvitation);
+router.post('/families/:familyId/invitations', async (req, res, next) => {
+  try {
+    await familyController.inviteMember(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/families/:familyId/invitations', async (req, res, next) => {
+  try {
+    await familyController.getFamilyInvitations(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/families/:familyId/invitations/:invitationId', async (req, res, next) => {
+  try {
+    await familyController.cancelInvitation(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Accept invitation (special route that uses token)
-router.post('/invitations/:token/accept', familyController.acceptInvitation);
+router.post('/invitations/:token/accept', async (req, res, next) => {
+  try {
+    await familyController.acceptInvitation(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

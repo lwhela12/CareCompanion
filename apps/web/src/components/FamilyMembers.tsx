@@ -21,7 +21,7 @@ interface FamilyMember {
   email: string;
   role: string;
   relationship: string;
-  lastActive?: string;
+  joinedAt?: string;
 }
 
 interface PendingInvitation {
@@ -51,10 +51,11 @@ const roleLabels = {
 interface FamilyMembersProps {
   familyId: string;
   currentUserRole: string;
+  members: FamilyMember[];
 }
 
-export function FamilyMembers({ familyId, currentUserRole }: FamilyMembersProps) {
-  const [members, setMembers] = useState<FamilyMember[]>([]);
+export function FamilyMembers({ familyId, currentUserRole, members: initialMembers }: FamilyMembersProps) {
+  const [members, setMembers] = useState<FamilyMember[]>(initialMembers);
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,40 +72,21 @@ export function FamilyMembers({ familyId, currentUserRole }: FamilyMembersProps)
   const canInvite = ['primary_caregiver', 'caregiver'].includes(currentUserRole);
 
   useEffect(() => {
-    fetchFamilyData();
+    setMembers(initialMembers);
+  }, [initialMembers]);
+
+  useEffect(() => {
+    fetchInvitations();
   }, [familyId]);
 
-  const fetchFamilyData = async () => {
+  const fetchInvitations = async () => {
     try {
-      // In a real app, fetch members and invitations
-      // For now, using mock data
-      setMembers([
-        {
-          id: '1',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          email: 'sarah@example.com',
-          role: 'primary_caregiver',
-          relationship: 'Daughter',
-          lastActive: '2 hours ago',
-        },
-        {
-          id: '2',
-          firstName: 'Michael',
-          lastName: 'Johnson',
-          email: 'michael@example.com',
-          role: 'caregiver',
-          relationship: 'Son',
-          lastActive: 'Yesterday',
-        },
-      ]);
-
       if (canInvite) {
         const invitesResponse = await api.get(`/api/v1/families/${familyId}/invitations`);
         setInvitations(invitesResponse.data.invitations);
       }
     } catch (err) {
-      setError('Failed to load family members');
+      setError('Failed to load invitations');
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +111,7 @@ export function FamilyMembers({ familyId, currentUserRole }: FamilyMembersProps)
         setInviteRole('family_member');
         setInviteRelationship('');
         setInviteSuccess(false);
-        fetchFamilyData();
+        fetchInvitations();
       }, 2000);
     } catch (err: any) {
       setInviteError(err.response?.data?.error?.message || 'Failed to send invitation');
@@ -141,7 +123,7 @@ export function FamilyMembers({ familyId, currentUserRole }: FamilyMembersProps)
   const cancelInvitation = async (invitationId: string) => {
     try {
       await api.delete(`/api/v1/families/${familyId}/invitations/${invitationId}`);
-      fetchFamilyData();
+      fetchInvitations();
     } catch (err) {
       setError('Failed to cancel invitation');
     }
@@ -214,9 +196,9 @@ export function FamilyMembers({ familyId, currentUserRole }: FamilyMembersProps)
                     <div className="text-sm text-gray-600">
                       {member.relationship} • {member.email}
                     </div>
-                    {member.lastActive && (
+                    {member.joinedAt && (
                       <div className="text-xs text-gray-500 mt-1">
-                        Active {member.lastActive}
+                        Joined {new Date(member.joinedAt).toLocaleDateString()}
                       </div>
                     )}
                   </div>

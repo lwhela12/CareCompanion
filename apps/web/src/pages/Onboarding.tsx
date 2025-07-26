@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 
 interface FormData {
+  userFirstName: string;
+  userLastName: string;
   familyName: string;
   patientFirstName: string;
   patientLastName: string;
@@ -28,6 +30,12 @@ const steps = [
     title: 'Welcome to CareCompanion',
     description: 'Let\'s set up your family care circle',
     icon: Heart,
+  },
+  {
+    id: 'user',
+    title: 'Tell Us About Yourself',
+    description: 'We\'ll use this to personalize your experience',
+    icon: Users,
   },
   {
     id: 'family',
@@ -51,6 +59,8 @@ export function Onboarding() {
   const [error, setError] = useState('');
   
   const [formData, setFormData] = useState<FormData>({
+    userFirstName: user?.firstName || '',
+    userLastName: user?.lastName || '',
     familyName: '',
     patientFirstName: '',
     patientLastName: '',
@@ -69,8 +79,10 @@ export function Onboarding() {
       case 0:
         return true;
       case 1:
-        return formData.familyName.trim().length > 0;
+        return formData.userFirstName.trim().length > 0 && formData.userLastName.trim().length > 0;
       case 2:
+        return formData.familyName.trim().length > 0;
+      case 3:
         return (
           formData.patientFirstName.trim().length > 0 &&
           formData.patientLastName.trim().length > 0 &&
@@ -90,8 +102,14 @@ export function Onboarding() {
       
       try {
         const response = await api.post('/api/v1/families', {
-          ...formData,
+          familyName: formData.familyName,
+          patientFirstName: formData.patientFirstName,
+          patientLastName: formData.patientLastName,
           patientDateOfBirth: new Date(formData.patientDateOfBirth).toISOString(),
+          patientGender: formData.patientGender,
+          relationship: formData.relationship,
+          userFirstName: formData.userFirstName,
+          userLastName: formData.userLastName,
         });
         
         // Navigate to dashboard
@@ -197,6 +215,41 @@ export function Onboarding() {
 
             {currentStep === 1 && (
               <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Your First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.userFirstName}
+                      onChange={(e) => updateFormData('userFirstName', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                      placeholder="e.g., John"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Your Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.userLastName}
+                      onChange={(e) => updateFormData('userLastName', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                      placeholder="e.g., Smith"
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500">
+                  We'll use this information to personalize your experience and help other family members identify you
+                </p>
+              </div>
+            )}
+
+            {currentStep === 2 && (
+              <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Family Name
@@ -216,7 +269,7 @@ export function Onboarding() {
               </div>
             )}
 
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
