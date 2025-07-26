@@ -8,9 +8,11 @@ import {
   Users2,
   Menu,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useOnboarding } from '@/hooks/useOnboarding';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
@@ -22,6 +24,15 @@ const navigation = [
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isChecking } = useOnboarding();
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

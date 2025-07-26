@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { clerkMiddleware } from '@clerk/express';
 import { config } from './config';
 import { errorHandler } from './middleware/error';
 import { logger } from './utils/logger';
@@ -23,6 +24,11 @@ async function startServer() {
   }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  
+  // Add Clerk middleware before routes
+  app.use(clerkMiddleware({
+    secretKey: config.clerk.secretKey,
+  }));
 
   // Health check
   app.get('/health', (req, res) => {

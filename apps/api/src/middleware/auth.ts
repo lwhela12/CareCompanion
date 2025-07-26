@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { clerkClient, requireAuth } from '@clerk/express';
+import { clerkClient } from '@clerk/express';
 import { PrismaClient } from '@carecompanion/database';
 import { ErrorCodes } from '@carecompanion/shared';
 import { ApiError } from './error';
@@ -26,7 +26,17 @@ declare global {
 }
 
 // Middleware to require authentication
-export const authenticate = requireAuth();
+export async function authenticate(req: Request, res: Response, next: NextFunction) {
+  if (!req.auth || !req.auth.userId) {
+    return res.status(401).json({
+      error: {
+        code: ErrorCodes.UNAUTHORIZED,
+        message: 'Authentication required',
+      },
+    });
+  }
+  next();
+}
 
 // Middleware to load user data from database
 export async function loadUser(req: Request, res: Response, next: NextFunction) {
