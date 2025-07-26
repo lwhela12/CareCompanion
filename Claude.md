@@ -11,6 +11,7 @@ You are building CareCompanion, an AI-powered platform to help families manage c
 **Key Documents**:
 - `Product_Requirements_Document.md` - Product Requirements Document (WHAT we're building)
 - `Design_Document.md` - Technical Design Document (HOW we're building it)
+- 'design/UI_Design.md' - UI Design Guide
 
 ## Development Philosophy
 
