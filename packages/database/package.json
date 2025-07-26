@@ -1,0 +1,24 @@
+{
+  "name": "@carecompanion/database",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx src/seed.ts",
+    "clean": "rm -rf node_modules .turbo"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.8.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.8.1",
+    "tsx": "^4.7.0",
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3"
+  }
+}
