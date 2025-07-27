@@ -7,6 +7,15 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
+// Get all medications (for calendar)
+router.get('/medications', async (req, res, next) => {
+  try {
+    await medicationController.getMedications(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Medication management
 router.post('/medications', async (req, res, next) => {
   try {

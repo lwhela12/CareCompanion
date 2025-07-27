@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Load environment variables from root directory
+dotenv.config({ path: path.join(__dirname, '../../../../.env') });
 
 export const config = {
   // Server

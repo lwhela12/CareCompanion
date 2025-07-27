@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import { QuickEntry } from '@/components/QuickEntry';
 
 const quickActions = [
   {
@@ -131,6 +132,7 @@ export function Dashboard() {
   const [userName, setUserName] = useState('');
   const [todaysMedications, setTodaysMedications] = useState<TodayMedication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showQuickEntry, setShowQuickEntry] = useState(false);
 
   useEffect(() => {
     const fetchFamilyData = async () => {
@@ -190,6 +192,29 @@ export function Dashboard() {
     }
   };
 
+  const handleQuickAction = (actionTitle: string) => {
+    switch (actionTitle) {
+      case 'Quick Entry':
+        setShowQuickEntry(true);
+        break;
+      case "Today's Schedule":
+        // TODO: Navigate to schedule or show schedule modal
+        break;
+      case 'View Insights':
+        // TODO: Navigate to insights page
+        break;
+      case 'Upload Document':
+        // TODO: Show document upload modal
+        break;
+    }
+  };
+
+  const handleQuickEntrySave = () => {
+    // Optionally refresh recent activity or show a success message
+    // For now, just close the modal
+    setShowQuickEntry(false);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -213,6 +238,7 @@ export function Dashboard() {
         {quickActions.map((action) => (
           <button
             key={action.title}
+            onClick={() => handleQuickAction(action.title)}
             className="flex items-center gap-4 p-5 bg-white rounded-xl border-2 border-gray-200 hover:border-primary-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
           >
             <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -360,6 +386,15 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Quick Entry Modal */}
+      {showQuickEntry && (
+        <QuickEntry
+          onClose={() => setShowQuickEntry(false)}
+          onSave={handleQuickEntrySave}
+          patientName={patientName}
+        />
+      )}
     </div>
   );
 }

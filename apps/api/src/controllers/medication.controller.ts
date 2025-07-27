@@ -38,6 +38,71 @@ const refillMedicationSchema = z.object({
 });
 
 export class MedicationController {
+  // Get all medications for the family (for calendar view)
+  async getMedications(req: AuthRequest, res: Response) {
+    const userId = req.auth!.userId;
+    const { includeSchedules } = req.query;
+
+    // Get user's family
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      include: {
+        familyMembers: {
+          where: { isActive: true },
+          include: {
+            family: {
+              include: {
+                patient: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user || user.familyMembers.length === 0) {
+      throw new ApiError(ErrorCodes.NOT_FOUND, 'No family found', 404);
+    }
+
+    const family = user.familyMembers[0].family;
+    const patientId = family.patient?.id;
+
+    if (!patientId) {
+      return res.json({ medications: [] });
+    }
+
+    const medications = await prisma.medication.findMany({
+      where: {
+        patientId,
+        isActive: true,
+      },
+      include: {
+        patient: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        createdBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // Include schedule times if requested (for calendar)
+    const medicationsWithSchedules = medications.map((med) => ({
+      ...med,
+      scheduleTimes: includeSchedules ? med.scheduleTime : undefined,
+    }));
+
+    res.json({ medications: medicationsWithSchedules });
+  }
+
   // Create a new medication
   async createMedication(req: AuthRequest, res: Response) {
     const validation = createMedicationSchema.safeParse(req.body);

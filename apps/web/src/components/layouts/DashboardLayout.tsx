@@ -6,6 +6,7 @@ import {
   Pill,
   Book,
   Users2,
+  Calendar,
   Menu,
   X,
   Loader2,
@@ -16,9 +17,9 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Patients', href: '/patients', icon: Users },
   { name: 'Medications', href: '/medications', icon: Pill },
   { name: 'Journal', href: '/journal', icon: Book },
+  { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Family', href: '/family', icon: Users2 },
 ];
 
