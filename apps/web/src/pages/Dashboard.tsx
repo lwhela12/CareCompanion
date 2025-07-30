@@ -11,13 +11,17 @@ import {
   Clock,
   CheckCircle,
   Check,
-  X
+  X,
+  ClipboardList
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { QuickEntry } from '@/components/QuickEntry';
+import { TodaySchedule } from '@/components/TodaySchedule';
+import { AddTaskModal } from '@/components/AddTaskModal';
 
-const quickActions = [
+const getQuickActions = (todayStats: { tasks: number; appointments: number }) => [
   {
     icon: Plus,
     title: 'Quick Entry',
@@ -27,13 +31,15 @@ const quickActions = [
   {
     icon: Calendar,
     title: "Today's Schedule",
-    subtitle: '3 tasks, 2 appointments',
+    subtitle: todayStats.tasks === 0 && todayStats.appointments === 0 
+      ? 'All caught up for today!'
+      : `${todayStats.tasks} task${todayStats.tasks !== 1 ? 's' : ''} for you, ${todayStats.appointments} appointment${todayStats.appointments !== 1 ? 's' : ''}`,
     color: 'primary',
   },
   {
-    icon: BarChart2,
-    title: 'View Insights',
-    subtitle: 'Weekly patterns & trends',
+    icon: ClipboardList,
+    title: 'Add Task',
+    subtitle: 'Create a new care task',
     color: 'primary',
   },
   {
@@ -71,28 +77,6 @@ const statusCards = [
   },
 ];
 
-const getRecentActivity = (patientName: string) => [
-  {
-    time: '30 minutes ago',
-    title: 'Morning medications given',
-    description: 'Aricept 10mg, Metformin 500mg - taken with breakfast',
-  },
-  {
-    time: '8:00 AM',
-    title: 'Good morning mood',
-    description: `${patientName} woke up refreshed, recognized everyone, ate full breakfast`,
-  },
-  {
-    time: 'Yesterday, 7:30 PM',
-    title: 'Evening confusion episode',
-    description: 'Brief disorientation about the day, resolved after reassurance',
-  },
-  {
-    time: 'Yesterday, 2:00 PM',
-    title: 'Physical therapy completed',
-    description: '45-minute session, good participation, balance improving',
-  },
-];
 
 interface TodayMedication {
   medicationId: string;
@@ -133,6 +117,16 @@ export function Dashboard() {
   const [todaysMedications, setTodaysMedications] = useState<TodayMedication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [showTodaySchedule, setShowTodaySchedule] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [todayStats, setTodayStats] = useState({ tasks: 0, appointments: 0 });
+  const [recentActivity, setRecentActivity] = useState<Array<{
+    time: string;
+    title: string;
+    description: string;
+    type: 'medication' | 'journal' | 'task' | 'appointment';
+    timestamp: Date;
+  }>>([]);
 
   useEffect(() => {
     const fetchFamilyData = async () => {
@@ -145,11 +139,9 @@ export function Dashboard() {
           setUserName(response.data.user.firstName || 'there');
         }
         
-        // Fetch today's medications if we have a patient
+        // Fetch today's data if we have a patient
         if (response.data.families.length > 0) {
-          const patientId = response.data.families[0].patient.id;
-          const medsResponse = await api.get(`/api/v1/patients/${patientId}/medications/today`);
-          setTodaysMedications(medsResponse.data.schedule);
+          await fetchTodayData(response.data.families[0].patient.id, response.data.user?.id);
         }
       } catch (error) {
         console.error('Error fetching family data:', error);
@@ -160,6 +152,185 @@ export function Dashboard() {
 
     fetchFamilyData();
   }, []);
+
+  const fetchTodayData = async (patientId: string, currentUserId?: string) => {
+    try {
+      // Fetch today's medications
+      const medsResponse = await api.get(`/api/v1/patients/${patientId}/medications/today`);
+      setTodaysMedications(medsResponse.data.schedule);
+      
+      // Fetch today's tasks and appointments for stats
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      
+      const tasksResponse = await api.get(`/api/v1/care-tasks?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}&includeVirtual=true`);
+      
+      // Count pending medications
+      let pendingMedications = 0;
+      if (medsResponse.data.schedule) {
+        pendingMedications = medsResponse.data.schedule.filter((med: any) => 
+          med.status === 'pending'
+        ).length;
+      }
+      
+      // Count tasks and appointments
+      let taskCount = pendingMedications; // Start with pending medications
+      let appointmentCount = 0;
+      
+      if (tasksResponse.data.tasks) {
+        tasksResponse.data.tasks.forEach((task: any) => {
+          // Skip completed tasks
+          if (task.status === 'COMPLETED') {
+            return;
+          }
+          
+          // Count tasks for current user:
+          // 1. Tasks explicitly assigned to current user
+          // 2. Unassigned tasks (null assignedToId - includes patient assignments)
+          const isForCurrentUser = !task.assignedToId || task.assignedTo?.id === currentUserId;
+          
+          if (!isForCurrentUser) {
+            return;
+          }
+          
+          const isMedicalAppointment = task.description?.includes('🏥');
+          const isSocialVisit = task.description?.includes('👥') || task.description?.includes('👨‍👩‍👧‍👦');
+          const isAppointment = task.priority === 'HIGH' && (isMedicalAppointment || task.description?.includes('🧠') || task.description?.includes('🔬')) || isSocialVisit;
+          
+          if (isAppointment) {
+            appointmentCount++;
+          } else {
+            taskCount++;
+          }
+        });
+      }
+      
+      setTodayStats({ tasks: taskCount, appointments: appointmentCount });
+      
+      // Fetch recent activity
+      await fetchRecentActivity(patientId);
+    } catch (error) {
+      console.error('Error fetching today data:', error);
+    }
+  };
+
+  const fetchRecentActivity = async (patientId?: string) => {
+    try {
+      const activities: Array<{
+        time: string;
+        title: string;
+        description: string;
+        type: 'medication' | 'journal' | 'task' | 'appointment';
+        timestamp: Date;
+      }> = [];
+
+      // Fetch recent journal entries (last 3 days)
+      try {
+        const journalResponse = await api.get('/api/v1/journal?days=3');
+        
+        if (journalResponse.data.entries) {
+          journalResponse.data.entries.slice(0, 6).forEach((entry: any) => {
+            const createdAt = new Date(entry.createdAt);
+            activities.push({
+              time: formatTimeAgo(createdAt),
+              title: `Journal entry by ${entry.user?.firstName || 'Caregiver'}`,
+              description: entry.content.length > 120 ? entry.content.substring(0, 120) + '...' : entry.content,
+              type: 'journal',
+              timestamp: createdAt
+            });
+          });
+        }
+      } catch (error) {
+        console.log('Could not fetch journal entries:', error);
+      }
+
+      // Get recent medication activity from today's schedule  
+      try {
+        if (patientId) {
+          const medsResponse = await api.get(`/api/v1/patients/${patientId}/medications/today`);
+          
+          if (medsResponse.data.schedule) {
+            medsResponse.data.schedule.forEach((med: any) => {
+              if (med.status === 'given' && med.givenTime) {
+                const givenTime = new Date(med.scheduledTime);
+                // Only include medications given in the last 24 hours
+                const now = new Date();
+                const hoursDiff = (now.getTime() - givenTime.getTime()) / (1000 * 60 * 60);
+                
+                if (hoursDiff <= 24) {
+                  activities.push({
+                    time: formatTimeAgo(givenTime),
+                    title: `${med.medicationName} administered`,
+                    description: `${med.dosage} given${med.givenBy ? ` by ${med.givenBy.firstName}` : ''}`,
+                    type: 'medication',
+                    timestamp: givenTime
+                  });
+                }
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.log('Could not fetch medication logs:', error);
+      }
+
+      // Fetch recently completed tasks (last 3 days)
+      try {
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        const endDate = new Date();
+        
+        const taskResponse = await api.get(`/api/v1/care-tasks?startDate=${threeDaysAgo.toISOString()}&endDate=${endDate.toISOString()}`);
+        
+        if (taskResponse.data.tasks) {
+          taskResponse.data.tasks
+            .filter((task: any) => task.status === 'COMPLETED')
+            .slice(0, 4)
+            .forEach((task: any) => {
+              const updatedAt = new Date(task.updatedAt);
+              const isMedicalAppointment = task.description?.includes('🏥');
+              const isSocialVisit = task.description?.includes('👥') || task.description?.includes('👨‍👩‍👧‍👦');
+              const isAppointment = task.priority === 'HIGH' && (isMedicalAppointment || task.description?.includes('🧠') || task.description?.includes('🔬')) || isSocialVisit;
+              
+              activities.push({
+                time: formatTimeAgo(updatedAt),
+                title: isAppointment ? `${task.title} completed` : `Task completed: ${task.title}`,
+                description: task.description || `Completed by ${task.assignedTo?.firstName || 'caregiver'}`,
+                type: isAppointment ? 'appointment' : 'task',
+                timestamp: updatedAt
+              });
+            });
+        }
+      } catch (error) {
+        console.log('Could not fetch completed tasks:', error);
+      }
+
+      // Sort by timestamp (most recent first) and take top 6
+      activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      setRecentActivity(activities.slice(0, 6));
+
+    } catch (error) {
+      console.error('Error fetching recent activity:', error);
+    }
+  };
+
+  const formatTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInMinutes < 60) {
+      return diffInMinutes <= 1 ? 'Just now' : `${diffInMinutes} minutes ago`;
+    } else if (diffInHours < 24) {
+      return diffInHours === 1 ? '1 hour ago' : `${diffInHours} hours ago`;
+    } else if (diffInDays === 1) {
+      return `Yesterday, ${format(date, 'h:mm a')}`;
+    } else {
+      return format(date, 'MMM d, h:mm a');
+    }
+  };
 
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good morning' : currentHour < 17 ? 'Good afternoon' : 'Good evening';
@@ -198,7 +369,10 @@ export function Dashboard() {
         setShowQuickEntry(true);
         break;
       case "Today's Schedule":
-        // TODO: Navigate to schedule or show schedule modal
+        setShowTodaySchedule(true);
+        break;
+      case 'Add Task':
+        setShowAddTask(true);
         break;
       case 'View Insights':
         // TODO: Navigate to insights page
@@ -209,10 +383,30 @@ export function Dashboard() {
     }
   };
 
+  const handleScheduleUpdate = () => {
+    // Refresh medications, stats, and recent activity when schedule items are updated
+    const refreshData = async () => {
+      try {
+        const response = await api.get<FamilyData>('/api/v1/families');
+        
+        if (response.data.families.length > 0) {
+          const patientId = response.data.families[0].patient.id;
+          await fetchTodayData(patientId, response.data.user?.id); // This includes recent activity refresh
+        }
+      } catch (error) {
+        console.error('Error refreshing data:', error);
+      }
+    };
+    
+    refreshData();
+  };
+
   const handleQuickEntrySave = () => {
-    // Optionally refresh recent activity or show a success message
-    // For now, just close the modal
+    // Refresh recent activity when quick entry is saved
     setShowQuickEntry(false);
+    if (familyData?.families?.[0]?.patient?.id) {
+      fetchRecentActivity(familyData.families[0].patient.id);
+    }
   };
 
   if (isLoading) {
@@ -235,7 +429,7 @@ export function Dashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {quickActions.map((action) => (
+        {getQuickActions(todayStats).map((action) => (
           <button
             key={action.title}
             onClick={() => handleQuickAction(action.title)}
@@ -293,20 +487,44 @@ export function Dashboard() {
               
               {/* Timeline items */}
               <div className="space-y-6">
-                {getRecentActivity(patientName).map((item, index) => (
-                  <div key={index} className="relative flex gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
-                      <div className="w-4 h-4 bg-white rounded-full border-[3px] border-primary-500 z-10" />
-                    </div>
-                    <div className="flex-1 pb-6">
-                      <div className="text-sm text-gray-500 mb-1">{item.time}</div>
-                      <div className="bg-gray-50 rounded-xl p-4">
-                        <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
-                        <p className="text-sm text-gray-600">{item.description}</p>
-                      </div>
-                    </div>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No recent activity to display</p>
                   </div>
-                ))}
+                ) : (
+                  recentActivity.map((item, index) => {
+                    // Get icon and color based on activity type
+                    const getActivityIcon = (type: string) => {
+                      switch (type) {
+                        case 'medication':
+                          return 'bg-blue-500';
+                        case 'journal':
+                          return 'bg-green-500';
+                        case 'task':
+                          return 'bg-yellow-500';
+                        case 'appointment':
+                          return 'bg-purple-500';
+                        default:
+                          return 'bg-primary-500';
+                      }
+                    };
+
+                    return (
+                      <div key={index} className="relative flex gap-4">
+                        <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
+                          <div className={`w-4 h-4 bg-white rounded-full border-[3px] ${getActivityIcon(item.type)} z-10`} />
+                        </div>
+                        <div className="flex-1 pb-6">
+                          <div className="text-sm text-gray-500 mb-1">{item.time}</div>
+                          <div className="bg-gray-50 rounded-xl p-4">
+                            <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
+                            <p className="text-sm text-gray-600">{item.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -393,6 +611,27 @@ export function Dashboard() {
           onClose={() => setShowQuickEntry(false)}
           onSave={handleQuickEntrySave}
           patientName={patientName}
+        />
+      )}
+
+      {/* Today's Schedule Modal */}
+      {showTodaySchedule && (
+        <TodaySchedule
+          isOpen={showTodaySchedule}
+          onClose={() => setShowTodaySchedule(false)}
+          onUpdate={handleScheduleUpdate}
+        />
+      )}
+
+      {/* Add Task Modal */}
+      {showAddTask && (
+        <AddTaskModal
+          isOpen={showAddTask}
+          onClose={() => setShowAddTask(false)}
+          onTaskAdded={() => {
+            setShowAddTask(false);
+            handleScheduleUpdate();
+          }}
         />
       )}
     </div>

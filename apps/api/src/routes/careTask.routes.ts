@@ -40,6 +40,14 @@ router.put('/:taskId', async (req, res, next) => {
   }
 });
 
+router.put('/:taskId/series', async (req, res, next) => {
+  try {
+    await careTaskController.updateSeries(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.delete('/:taskId', async (req, res, next) => {
   try {
     await careTaskController.deleteTask(req, res);
@@ -51,6 +59,14 @@ router.delete('/:taskId', async (req, res, next) => {
 router.post('/:taskId/complete', async (req, res, next) => {
   try {
     await careTaskController.completeTask(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/:taskId/materialize', async (req, res, next) => {
+  try {
+    await careTaskController.materializeTask(req, res);
   } catch (error) {
     next(error);
   }

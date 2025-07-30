@@ -38,22 +38,37 @@ export class FamilyController {
     const { familyName, patientFirstName, patientLastName, patientDateOfBirth, patientGender, relationship, userFirstName, userLastName } = validation.data;
     const userId = req.auth!.userId;
 
-    // Check if user already has a family
-    const existingUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      include: { familyMembers: true },
-    });
-
-    if (existingUser?.familyMembers.length) {
-      throw new ApiError(ErrorCodes.CONFLICT, 'User already belongs to a family', 409);
-    }
-
-    // Get user data from Clerk
+    // Get user data from Clerk first
     const clerkUser = await clerkClient.users.getUser(userId);
     const userEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId)?.emailAddress;
     
     if (!userEmail) {
       throw new ApiError(ErrorCodes.INVALID_REQUEST, 'User email not found', 400);
+    }
+
+    // Check if user already has a family (by Clerk ID or email)
+    const existingUserByClerkId = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      include: { familyMembers: true },
+    });
+
+    if (existingUserByClerkId?.familyMembers.length) {
+      throw new ApiError(ErrorCodes.CONFLICT, 'User already belongs to a family', 409);
+    }
+
+    // Also check by email in case they're claiming an existing account
+    const existingUserByEmail = await prisma.user.findUnique({
+      where: { email: userEmail },
+      include: { familyMembers: true },
+    });
+
+    if (existingUserByEmail?.familyMembers.length) {
+      // Update their Clerk ID and redirect them
+      await prisma.user.update({
+        where: { id: existingUserByEmail.id },
+        data: { clerkId: userId }
+      });
+      throw new ApiError(ErrorCodes.CONFLICT, 'User already belongs to a family', 409);
     }
 
     // Create family, patient, and link user in a transaction
@@ -127,7 +142,8 @@ export class FamilyController {
       const userId = req.auth!.userId;
       console.log('getUserFamilies - userId:', userId);
 
-      const user = await prisma.user.findUnique({
+      // First try to find user by Clerk ID
+      let user = await prisma.user.findUnique({
         where: { clerkId: userId },
         include: {
           familyMembers: {
@@ -156,31 +172,149 @@ export class FamilyController {
         },
       });
 
+      // If not found by Clerk ID, try to find by email and update
       if (!user) {
-        return res.json({ families: [] });
+        const clerkUser = await clerkClient.users.getUser(userId);
+        const userEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId)?.emailAddress;
+        
+        if (userEmail) {
+          // Check if user exists with this email
+          const existingUser = await prisma.user.findUnique({
+            where: { email: userEmail },
+            include: {
+              familyMembers: {
+                where: { isActive: true },
+                include: {
+                  family: {
+                    include: {
+                      patient: true,
+                      members: {
+                        where: { isActive: true },
+                        include: {
+                          user: {
+                            select: {
+                              id: true,
+                              firstName: true,
+                              lastName: true,
+                              email: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          if (existingUser) {
+            // Update the Clerk ID to claim this account
+            console.log(`Claiming existing account for ${userEmail} with Clerk ID ${userId}`);
+            user = await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { 
+                clerkId: userId,
+                // Update name if available from Clerk
+                firstName: clerkUser.firstName || existingUser.firstName,
+                lastName: clerkUser.lastName || existingUser.lastName,
+              },
+              include: {
+                familyMembers: {
+                  where: { isActive: true },
+                  include: {
+                    family: {
+                      include: {
+                        patient: true,
+                        members: {
+                          where: { isActive: true },
+                          include: {
+                            user: {
+                              select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            });
+          }
+        }
       }
 
-    const families = user.familyMembers.map((fm) => ({
-      id: fm.family.id,
-      name: fm.family.name,
-      role: fm.role,
-      patient: {
-        id: fm.family.patient!.id,
-        firstName: fm.family.patient!.firstName,
-        lastName: fm.family.patient!.lastName,
-      },
-      memberCount: fm.family.members.length,
-    }));
+      // If user exists and has families, return them
+      if (user && user.familyMembers.length > 0) {
+        const families = user.familyMembers.map((fm) => ({
+          id: fm.family.id,
+          name: fm.family.name,
+          role: fm.role,
+          patient: {
+            id: fm.family.patient!.id,
+            firstName: fm.family.patient!.firstName,
+            lastName: fm.family.patient!.lastName,
+          },
+          memberCount: fm.family.members.length,
+        }));
 
-    res.json({ 
-      families,
-      user: user ? {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-      } : null,
-    });
+        return res.json({ 
+          families,
+          user: {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+          },
+        });
+      }
+
+      // If no user or no families, check for pending invitations
+      const clerkUser = await clerkClient.users.getUser(userId);
+      const userEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId)?.emailAddress;
+      
+      if (userEmail) {
+        const pendingInvitation = await prisma.invitation.findFirst({
+          where: {
+            email: userEmail,
+            status: InvitationStatus.pending,
+            expiresAt: { gt: new Date() },
+          },
+        });
+
+        if (pendingInvitation) {
+          // User has a pending invitation, return it so frontend can redirect
+          return res.json({ 
+            families: [],
+            user: user ? {
+              id: user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+            } : null,
+            pendingInvitation: {
+              token: pendingInvitation.token,
+              familyId: pendingInvitation.familyId,
+            },
+          });
+        }
+      }
+
+      // No user, no families, no invitations
+      return res.json({ 
+        families: [],
+        user: user ? {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+        } : null,
+      });
     } catch (error) {
       console.error('Error getting user families:', error);
       throw error;

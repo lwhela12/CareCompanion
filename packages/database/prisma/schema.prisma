@@ -169,24 +169,32 @@ model MedicationLog {
 }
 
 model CareTask {
-  id           String           @id @default(uuid())
-  familyId     String           @map("family_id")
-  title        String
-  description  String?
-  dueDate      DateTime?        @map("due_date")
-  assignedToId String?          @map("assigned_to_id")
-  createdById  String           @map("created_by_id")
-  priority     CareTaskPriority @default(MEDIUM)
-  status       CareTaskStatus   @default(PENDING)
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
-  logs         CareTaskLog[]
-  assignedTo   User?            @relation("AssignedTo", fields: [assignedToId], references: [id])
-  createdBy    User             @relation("CreatedBy", fields: [createdById], references: [id])
-  family       Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  id                String           @id @default(uuid())
+  familyId          String           @map("family_id")
+  title             String
+  description       String?
+  dueDate           DateTime?        @map("due_date")
+  reminderDate      DateTime?        @map("reminder_date") // When task starts appearing in daily lists
+  assignedToId      String?          @map("assigned_to_id")
+  createdById       String           @map("created_by_id")
+  priority          CareTaskPriority @default(MEDIUM)
+  status            CareTaskStatus   @default(PENDING)
+  recurrenceRule    String?          @map("recurrence_rule") // Stores recurrence pattern
+  recurrenceEndDate DateTime?        @map("recurrence_end_date")
+  parentTaskId      String?          @map("parent_task_id") // Links instances to their recurrence template
+  isRecurrenceTemplate Boolean       @default(false) @map("is_recurrence_template") // True for the original recurring task
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  logs              CareTaskLog[]
+  assignedTo        User?            @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy         User             @relation("CreatedBy", fields: [createdById], references: [id])
+  family            Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  parentTask        CareTask?        @relation("RecurrenceInstances", fields: [parentTaskId], references: [id])
+  recurrenceInstances CareTask[]    @relation("RecurrenceInstances")
 
   @@index([familyId, status])
   @@index([assignedToId])
+  @@index([parentTaskId])
   @@map("care_tasks")
 }
 

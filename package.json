@@ -15,7 +15,9 @@
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
     "db:studio": "turbo run db:studio",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "seed:munson": "tsx scripts/run-seed.ts",
+    "seed:cleanup": "tsx scripts/cleanup-seed.ts"
   },
   "devDependencies": {
     "turbo": "latest",
@@ -27,7 +29,8 @@
     "@typescript-eslint/parser": "^6.19.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0"
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "tsx": "^4.7.0"
   },
   "engines": {
     "node": ">=20.0.0",

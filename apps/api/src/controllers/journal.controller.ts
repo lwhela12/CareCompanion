@@ -87,7 +87,7 @@ export class JournalController {
   // Get journal entries for the family
   async getEntries(req: AuthRequest, res: Response) {
     const userId = req.auth!.userId;
-    const { days = 30, includePrivate = false } = req.query;
+    const { days = 30 } = req.query;
 
     // Get user's family and role
     const user = await prisma.user.findUnique({
@@ -117,13 +117,16 @@ export class JournalController {
       },
     };
 
-    // Only include private entries if requested and user has permission
-    if (!includePrivate || !['primary_caregiver', 'caregiver'].includes(userRole)) {
-      where.OR = [
-        { isPrivate: false },
-        { userId: user.id }, // Always show user's own private entries
-      ];
-    }
+    // Always filter private entries - they should only be visible to the author
+    where.OR = [
+      { isPrivate: false }, // Show all public entries
+      { 
+        AND: [
+          { isPrivate: true },
+          { userId: user.id } // Only show private entries authored by the current user
+        ]
+      }
+    ];
 
     const entries = await prisma.journalEntry.findMany({
       where,
@@ -183,12 +186,9 @@ export class JournalController {
       throw new ApiError(ErrorCodes.FORBIDDEN, 'Access denied', 403);
     }
 
-    // Check private entry access
+    // Check private entry access - private entries are only visible to the author
     if (entry.isPrivate && entry.userId !== user.id) {
-      const userRole = user.familyMembers.find(fm => fm.familyId === entry.familyId)?.role;
-      if (!userRole || !['primary_caregiver', 'caregiver'].includes(userRole)) {
-        throw new ApiError(ErrorCodes.FORBIDDEN, 'Access denied to private entry', 403);
-      }
+      throw new ApiError(ErrorCodes.FORBIDDEN, 'Private entries can only be viewed by their author', 403);
     }
 
     res.json({ entry });

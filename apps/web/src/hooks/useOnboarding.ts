@@ -24,17 +24,24 @@ export function useOnboarding() {
     try {
       const response = await api.get('/api/v1/families');
       const families = response.data.families;
+      const pendingInvitation = response.data.pendingInvitation;
 
       if (families.length === 0) {
-        // User has no families, needs onboarding
-        setNeedsOnboarding(true);
-        navigate('/onboarding');
-      } else {
-        // User has families, check if there's a pending invitation
-        const pendingInvitation = sessionStorage.getItem('pendingInvitation');
+        // Check if user has a pending invitation from the API
         if (pendingInvitation) {
+          // User has a pending invitation, redirect to accept it
+          navigate(`/invitation/${pendingInvitation.token}`);
+        } else {
+          // User has no families and no invitations, needs onboarding
+          setNeedsOnboarding(true);
+          navigate('/onboarding');
+        }
+      } else {
+        // User has families, check if there's a pending invitation in session storage
+        const sessionInvitation = sessionStorage.getItem('pendingInvitation');
+        if (sessionInvitation) {
           sessionStorage.removeItem('pendingInvitation');
-          navigate(`/invitation/${pendingInvitation}`);
+          navigate(`/invitation/${sessionInvitation}`);
         } else {
           setNeedsOnboarding(false);
         }

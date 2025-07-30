@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, Clock, MapPin, User, FileText, UserCheck } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, User, FileText, UserCheck, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@clerk/clerk-react';
 import { api } from '../lib/api';
 
-interface AddAppointmentModalProps {
+interface EditAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAppointmentAdded: () => void;
-  defaultDate?: Date;
+  onAppointmentUpdated: () => void;
+  task: any;
 }
 
-export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defaultDate }: AddAppointmentModalProps) {
+export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, task }: EditAppointmentModalProps) {
   const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [patient, setPatient] = useState<any>(null);
+  const [editMode, setEditMode] = useState<'occurrence' | 'series'>('occurrence');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -23,20 +24,70 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
     location: '',
     provider: '',
     assignedToId: '',
-    date: defaultDate ? format(defaultDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-    time: '09:00',
+    date: '',
+    time: '',
     duration: '60',
     notes: '',
-    isRecurring: false,
-    recurrenceType: 'daily' as 'daily' | 'weekly' | 'biweekly' | 'monthly',
-    recurrenceEndDate: '',
   });
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && task) {
       fetchFamilyData();
+      initializeFormData();
     }
-  }, [isOpen]);
+  }, [isOpen, task]);
+
+  const initializeFormData = () => {
+    if (!task) return;
+
+    // Parse the task data
+    // For virtual tasks, use the virtual date instead of the template's due date
+    const dueDate = task.virtualDate ? new Date(task.virtualDate) : new Date(task.dueDate);
+    const description = task.description || '';
+    
+    // Extract appointment type from description
+    let appointmentType = 'medical';
+    if (description.includes('👥')) appointmentType = 'social';
+    else if (description.includes('👨‍👩‍👧‍👦')) appointmentType = 'family';
+    else if (description.includes('🧠')) appointmentType = 'therapy';
+    else if (description.includes('🔬')) appointmentType = 'lab';
+    
+    // Extract provider and location from description
+    const lines = description.split('\n');
+    let provider = '';
+    let location = '';
+    let notes = '';
+    
+    lines.forEach(line => {
+      if (line.includes('with ')) {
+        provider = line.replace(/.*with /, '').trim();
+      } else if (line.includes('📍 ')) {
+        location = line.replace('📍 ', '').trim();
+      } else if (!line.includes('🏥') && !line.includes('👥') && !line.includes('🧠') && !line.includes('🔬') && !line.includes('👨‍👩‍👧‍👦')) {
+        notes += (notes ? '\n' : '') + line;
+      }
+    });
+
+    // Clean up title - remove assignee name in parentheses if present
+    let cleanTitle = task.title;
+    const titleMatch = cleanTitle.match(/^(.*?)\s*\([^)]+\)$/);
+    if (titleMatch) {
+      cleanTitle = titleMatch[1].trim();
+    }
+
+    setFormData({
+      title: cleanTitle,
+      description: notes.trim(),
+      appointmentType,
+      location,
+      provider,
+      assignedToId: task.assignedToId || '',
+      date: format(dueDate, 'yyyy-MM-dd'),
+      time: format(dueDate, 'HH:mm'),
+      duration: '60',
+      notes: notes.trim(),
+    });
+  };
 
   const fetchFamilyData = async () => {
     try {
@@ -72,10 +123,24 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
     try {
       const token = await getToken();
       
-      // Combine date and time
+      // If editing a virtual occurrence only, materialize it first
+      if (isVirtual && editMode === 'occurrence' && task.id.includes('_virtual_')) {
+        // Materialize the virtual task
+        const materializeResponse = await api.post(`/api/v1/care-tasks/${task.id}/materialize`, {
+          virtualDate: task.virtualDate
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Update task reference to the materialized version
+        task.id = materializeResponse.data.task.id;
+      }
+      
+      // Combine date and time properly to avoid timezone issues
       const [hours, minutes] = formData.time.split(':');
-      const appointmentDate = new Date(formData.date);
-      appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      // Create date string in ISO format to ensure correct date
+      const dateTimeString = `${formData.date}T${formData.time}:00`;
+      const appointmentDate = new Date(dateTimeString);
 
       // Get emoji and priority based on appointment type
       const getEmoji = () => {
@@ -93,63 +158,65 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
         return ['medical', 'therapy', 'lab'].includes(formData.appointmentType) ? 'high' : 'medium';
       };
 
-      // Prepare the request body
-      const requestBody: any = {
+      // Prepare update data
+      const updateData: any = {
         title: formData.title,
         description: `${getEmoji()} ${formData.provider ? `with ${formData.provider}` : ''}\n${formData.location ? `📍 ${formData.location}` : ''}\n${formData.description}`,
         dueDate: appointmentDate.toISOString(),
         priority: getPriority(),
-        assignedToId: formData.assignedToId || undefined,
       };
 
-      // Add recurrence data if applicable
-      if (formData.isRecurring) {
-        requestBody.isRecurring = true;
-        requestBody.recurrenceType = formData.recurrenceType;
-        // Only include end date if provided
-        if (formData.recurrenceEndDate) {
-          requestBody.recurrenceEndDate = new Date(formData.recurrenceEndDate).toISOString();
-        }
+      // Handle assignedToId - send null to clear assignment
+      if (formData.assignedToId) {
+        updateData.assignedToId = formData.assignedToId;
+      } else {
+        updateData.assignedToId = null;
       }
 
-      // Create appointment(s)
-      const response = await api.post('/api/v1/care-tasks', requestBody, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      // Show success message
-      if (response.data.message) {
-        alert(response.data.message);
-      }
-
-      onAppointmentAdded();
-      onClose();
+      // Determine which task to update based on edit mode
+      let taskIdToUpdate = task.id;
       
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        appointmentType: 'medical',
-        location: '',
-        provider: '',
-        assignedToId: '',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        time: '09:00',
-        duration: '60',
-        notes: '',
-        isRecurring: false,
-        recurrenceType: 'daily',
-        recurrenceEndDate: '',
-      });
+      if (editMode === 'series') {
+        // If editing series, update the parent template
+        if (task.parentTaskId) {
+          taskIdToUpdate = task.parentTaskId;
+        } else if (isVirtual && task.id.includes('_virtual_')) {
+          // For virtual tasks, extract the parent ID
+          taskIdToUpdate = task.id.split('_virtual_')[0];
+        }
+        // If none of the above, it might be the template itself, so use task.id
+      }
+
+      // Update the task or series
+      if (editMode === 'series' && (task.parentTaskId || task.isRecurrenceTemplate || isVirtual)) {
+        // Use the series endpoint for updating all occurrences
+        const response = await api.put(`/api/v1/care-tasks/${taskIdToUpdate}/series`, updateData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.message) {
+          console.log(response.data.message);
+        }
+      } else {
+        // Regular update for single occurrence
+        await api.put(`/api/v1/care-tasks/${taskIdToUpdate}`, updateData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
+      onAppointmentUpdated();
+      onClose();
     } catch (error) {
-      console.error('Failed to create appointment:', error);
-      alert('Failed to create appointment. Please try again.');
+      console.error('Failed to update appointment:', error);
+      alert('Failed to update appointment. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   if (!isOpen) return null;
+
+  const isVirtual = task?.isVirtual;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -158,7 +225,9 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
         
         <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
           <div className="flex items-center justify-between p-6 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">Add Appointment</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {isVirtual ? 'Edit Recurring Appointment' : 'Edit Appointment'}
+            </h3>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500"
@@ -166,6 +235,44 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
               <X className="h-5 w-5" />
             </button>
           </div>
+
+          {(isVirtual || task?.parentTaskId) && (
+            <div className="px-6 pt-4">
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-3 mb-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-medium">This is a recurring appointment</p>
+                    <p className="mt-1">Choose whether to edit just this occurrence or the entire series.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="editMode"
+                      value="occurrence"
+                      checked={editMode === 'occurrence'}
+                      onChange={(e) => setEditMode(e.target.value as 'occurrence' | 'series')}
+                      className="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-sm font-medium text-amber-800">This occurrence only</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="editMode"
+                      value="series"
+                      checked={editMode === 'series'}
+                      onChange={(e) => setEditMode(e.target.value as 'occurrence' | 'series')}
+                      className="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-sm font-medium text-amber-800">All occurrences</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="p-6">
             <div className="space-y-4">
@@ -288,60 +395,6 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                 </div>
               </div>
 
-              {/* Recurring Appointment */}
-              <div className="border-t pt-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <input
-                    type="checkbox"
-                    id="recurring"
-                    checked={formData.isRecurring}
-                    onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
-                    className="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                  />
-                  <label htmlFor="recurring" className="text-sm font-medium text-gray-700">
-                    Make this a recurring appointment
-                  </label>
-                </div>
-
-                {formData.isRecurring && (
-                  <div className="space-y-4 mb-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Repeat
-                        </label>
-                        <select
-                          value={formData.recurrenceType}
-                          onChange={(e) => setFormData({ ...formData, recurrenceType: e.target.value as any })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                        >
-                          <option value="daily">Daily</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="biweekly">Bi-weekly</option>
-                          <option value="monthly">Monthly</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          End Date (Optional)
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.recurrenceEndDate}
-                          onChange={(e) => setFormData({ ...formData, recurrenceEndDate: e.target.value })}
-                          min={formData.date}
-                          placeholder="No end date"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Leave end date empty for indefinite recurrence
-                    </p>
-                  </div>
-                )}
-              </div>
-
               {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -372,7 +425,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                 disabled={loading || !formData.title}
                 className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating...' : 'Create Appointment'}
+                {loading ? 'Updating...' : 'Update Appointment'}
               </button>
             </div>
           </form>

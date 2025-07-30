@@ -17,12 +17,14 @@ import {
   X,
   Square,
   Pause,
-  Play
+  Play,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { AddTaskModal } from '@/components/AddTaskModal';
 
 interface JournalEntry {
   id: string;
@@ -61,6 +63,7 @@ export function Journal() {
   const [filterDays, setFilterDays] = useState(30);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [recordingStatus, setRecordingStatus] = useState<'idle' | 'recording' | 'transcribing'>('idle');
+  const [showAddTask, setShowAddTask] = useState(false);
 
   const {
     isRecording,
@@ -89,7 +92,7 @@ export function Journal() {
   const fetchData = async () => {
     try {
       const [entriesRes, insightsRes] = await Promise.all([
-        api.get(`/api/v1/journal?days=${filterDays}&includePrivate=true`),
+        api.get(`/api/v1/journal?days=${filterDays}`),
         api.get('/api/v1/journal/insights?days=7')
       ]);
       
@@ -322,18 +325,27 @@ export function Journal() {
             Track daily observations and care notes
           </p>
         </div>
-        <button
-          onClick={() => {
-            setShowNewEntry(true);
-            setEditingEntry(null);
-            setNewEntryContent('');
-            setIsPrivate(false);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors"
-        >
-          <Plus className="h-5 w-5" />
-          New Entry
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowAddTask(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
+          >
+            <ClipboardList className="h-5 w-5" />
+            Add Task
+          </button>
+          <button
+            onClick={() => {
+              setShowNewEntry(true);
+              setEditingEntry(null);
+              setNewEntryContent('');
+              setIsPrivate(false);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="h-5 w-5" />
+            New Entry
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -606,6 +618,18 @@ export function Journal() {
           ))
         )}
       </div>
+
+      {/* Add Task Modal */}
+      {showAddTask && (
+        <AddTaskModal
+          isOpen={showAddTask}
+          onClose={() => setShowAddTask(false)}
+          onTaskAdded={() => {
+            setShowAddTask(false);
+            // Optionally refresh the page or show a success message
+          }}
+        />
+      )}
     </div>
   );
 }
