@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '@carecompanion/database';
-import { FamilyRole, InvitationStatus } from '@prisma/client';
+import { prisma, FamilyRole, InvitationStatus } from '@carecompanion/database';
 import { sendEmail } from '../services/email.service';
 import { generateInviteToken } from '../utils/tokens';
 import { ApiError } from '../middleware/error';

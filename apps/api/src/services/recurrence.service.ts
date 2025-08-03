@@ -1,4 +1,4 @@
-import { CareTask, CareTaskStatus, CareTaskPriority } from '@prisma/client';
+import { CareTask, CareTaskStatus, CareTaskPriority } from '@carecompanion/database';
 import { 
   addDays, 
   addWeeks, 

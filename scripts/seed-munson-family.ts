@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@carecompanion/database';
 import { subDays, addDays, addWeeks, addMonths, format, startOfDay } from 'date-fns';
-
-const prisma = new PrismaClient();
 
 // Test account emails and Clerk IDs (get from Clerk dashboard or logs)
 const TEST_ACCOUNTS = {

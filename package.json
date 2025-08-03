@@ -17,7 +17,9 @@
     "db:studio": "turbo run db:studio",
     "clean": "turbo run clean && rm -rf node_modules",
     "seed:munson": "tsx scripts/run-seed.ts",
-    "seed:cleanup": "tsx scripts/cleanup-seed.ts"
+    "seed:cleanup": "tsx scripts/cleanup-seed.ts",
+    "setup:db": "./scripts/setup-db.sh",
+    "check:db": "./scripts/setup-db.sh"
   },
   "devDependencies": {
     "turbo": "latest",

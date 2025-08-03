@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@carecompanion/database';
 
 async function cleanupSeedData() {
   console.log('🧹 Cleaning up existing seed data...');

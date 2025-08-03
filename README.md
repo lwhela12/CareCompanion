@@ -36,21 +36,13 @@ npm install
 
 ### 2. Set Up Environment Variables
 
-Copy the example environment files:
+Create a single `.env` file in the root directory:
 
 ```bash
-# Root level
 cp .env.example .env
-
-# Database package
-cp packages/database/.env.example packages/database/.env
-
-# API
-cp apps/api/.env.example apps/api/.env
-
-# Web
-cp apps/web/.env.example apps/web/.env
 ```
+
+**Note**: The API and database packages use symlinks to the root `.env` file to ensure consistency.
 
 ### 3. Set Up Clerk Authentication
 
@@ -62,28 +54,25 @@ cp apps/web/.env.example apps/web/.env
    - `CLERK_SECRET_KEY` in `apps/api/.env`
    - `VITE_CLERK_PUBLISHABLE_KEY` in `apps/web/.env`
 
-### 4. Start Docker Services
+### 4. Start Docker Services and Set Up Database
 
 ```bash
+# Quick setup - starts Docker and checks database health
+npm run setup:db
+
+# Or manually:
 docker compose up -d
+
+# Then run migrations
+npm run db:generate
+npm run db:migrate
 ```
 
 This starts PostgreSQL on port 5432 and Redis on port 6379.
 
-### 5. Set Up Database
+**Database Health Check**: Run `npm run check:db` anytime to verify your database is properly configured.
 
-```bash
-# Generate Prisma client
-npm run db:generate
-
-# Run migrations
-npm run db:migrate
-
-# (Optional) Open Prisma Studio to view database
-npm run db:studio
-```
-
-### 6. Start Development Servers
+### 5. Start Development Servers
 
 ```bash
 npm run dev
@@ -100,6 +89,8 @@ This starts:
 - `npm run build` - Build all apps
 - `npm run lint` - Lint all packages
 - `npm run test` - Run tests
+- `npm run setup:db` - Set up Docker and database (run this first!)
+- `npm run check:db` - Verify database health
 - `npm run db:generate` - Generate Prisma client
 - `npm run db:migrate` - Run database migrations
 - `npm run db:studio` - Open Prisma Studio
@@ -149,6 +140,42 @@ The foundation is now set up. The next priorities are:
    - Family member invitations
 3. **Add AI Integration** for summaries and insights
 4. **Deploy to Production** (AWS/Vercel recommended)
+
+## Troubleshooting
+
+### Database Connection Issues
+
+If you encounter database connection errors:
+
+1. **Check Docker is running**: 
+   ```bash
+   docker ps
+   ```
+   If not, start Docker Desktop.
+
+2. **Run the database setup script**:
+   ```bash
+   npm run setup:db
+   ```
+   This will check Docker, verify the database exists, and ensure tables are in the correct schema.
+
+3. **Verify environment variables**:
+   - Ensure `.env` file exists in the root directory
+   - `DATABASE_URL` should be: `postgresql://postgres:postgres@localhost:5432/carecompanion`
+   - No schema parameters should be in the URL
+
+4. **Reset everything** (if needed):
+   ```bash
+   docker-compose down -v  # Remove volumes
+   docker-compose up -d    # Start fresh
+   npm run db:migrate      # Run migrations
+   ```
+
+### Common Issues
+
+- **Port 3000 already in use**: Kill the process with `lsof -ti :3000 | xargs kill -9`
+- **Docker not starting**: Restart Docker Desktop
+- **Prisma client issues**: Run `npm run db:generate` to regenerate
 
 ## Development Guidelines
 

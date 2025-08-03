@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '@carecompanion/database';
-import { CareTaskPriority, CareTaskStatus } from '@prisma/client';
+import { prisma, CareTaskPriority, CareTaskStatus } from '@carecompanion/database';
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
