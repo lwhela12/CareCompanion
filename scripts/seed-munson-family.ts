@@ -17,7 +17,7 @@ const TEST_ACCOUNTS = {
   },
   sue: {
     email: 'sue@test.com',
-    clerkId: null // Will be created with mock ID until real account is made
+    clerkId: 'user_344IGIF1xcLW1ShadPfowbrY7qo' // Will be created with mock ID until real account is made
   }
 };
 
@@ -184,22 +184,6 @@ async function seedMunsonFamily() {
       patient.id,
       TEST_ACCOUNTS.sue.clerkId
     );
-
-    // Ensure the patient user is also a FamilyMember (read_only) for consistent access patterns
-    const existingSueMember = await prisma.familyMember.findFirst({
-      where: { userId: sueUser.id, familyId: family.id }
-    });
-    if (!existingSueMember) {
-      await prisma.familyMember.create({
-        data: {
-          userId: sueUser.id,
-          familyId: family.id,
-          role: 'read_only',
-          relationship: 'patient',
-          isActive: true,
-        }
-      });
-    }
 
     // 4. Create family members
     console.log('👥 Adding family members...');
