@@ -24,7 +24,35 @@ carecompanion/
 - PostgreSQL (via Docker)
 - Redis (via Docker)
 
-## Getting Started
+## Quick Start (One Command!)
+
+### 🚀 The Fastest Way
+
+```bash
+npm install              # First time only
+npm run start:full      # Starts EVERYTHING in one terminal!
+```
+
+This single command will:
+- ✅ Check Docker is running
+- ✅ Start PostgreSQL, Redis, and LocalStack
+- ✅ Initialize S3 bucket
+- ✅ Install dependencies
+- ✅ Start API and Web servers
+
+Then open: **http://localhost:5173** 🎉
+
+### 💡 Alternative Commands
+
+```bash
+# If Docker is already running and you just want to start the apps:
+npm start
+
+# Traditional way (API and Web in separate terminals):
+npm run dev
+```
+
+## Detailed Setup (If Needed)
 
 ### 1. Clone and Install Dependencies
 
@@ -36,64 +64,69 @@ npm install
 
 ### 2. Set Up Environment Variables
 
-Create a single `.env` file in the root directory:
+Your `.env` is already configured for local development with LocalStack (no AWS account needed!)
 
-```bash
-cp .env.example .env
+To use real AWS S3 later, update:
+```env
+AWS_ACCESS_KEY_ID=your-real-key
+AWS_SECRET_ACCESS_KEY=your-real-secret
+# Comment out:
+# AWS_ENDPOINT_URL="http://localhost:4566"
 ```
-
-**Note**: The API and database packages use symlinks to the root `.env` file to ensure consistency.
 
 ### 3. Set Up Clerk Authentication
 
+Your Clerk keys are already in `.env` for development. For production:
+
 1. Sign up for a free account at [Clerk.com](https://clerk.com)
 2. Create a new application
-3. Copy your Publishable Key and Secret Key
-4. Add them to the environment files:
-   - `CLERK_PUBLISHABLE_KEY` in `apps/api/.env`
-   - `CLERK_SECRET_KEY` in `apps/api/.env`
-   - `VITE_CLERK_PUBLISHABLE_KEY` in `apps/web/.env`
+3. Copy your keys to `.env`
 
-### 4. Start Docker Services and Set Up Database
+### 4. Manual Docker Setup (Optional)
+
+If you don't use `npm run start:full`, you can manually start services:
 
 ```bash
-# Quick setup - starts Docker and checks database health
-npm run setup:db
-
-# Or manually:
-docker compose up -d
-
-# Then run migrations
-npm run db:generate
+docker-compose up -d
 npm run db:migrate
+./scripts/init-localstack.sh  # For S3
 ```
-
-This starts PostgreSQL on port 5432 and Redis on port 6379.
-
-**Database Health Check**: Run `npm run check:db` anytime to verify your database is properly configured.
 
 ### 5. Start Development Servers
 
 ```bash
+# Best option - one terminal:
+npm run start:full
+
+# Just apps (Docker already running):
+npm start
+
+# Traditional (separate terminals):
 npm run dev
 ```
 
-This starts:
-- API server on http://localhost:3000
-- Web app on http://localhost:5173
-
 ## Available Scripts
 
-### Root Level
-- `npm run dev` - Start all apps in development mode
-- `npm run build` - Build all apps
-- `npm run lint` - Lint all packages
-- `npm run test` - Run tests
+### 🚀 Development
+- `npm run start:full` - **⭐ RECOMMENDED** - Starts everything (Docker + Apps) in one terminal
+- `npm start` - Start API and Web (assumes Docker is running)
+- `npm run dev` - Traditional turbo dev (starts all workspaces)
+- `npm run dev:both` - Start API and Web with colored output
+- `npm run dev:api` - Start only API server
+- `npm run dev:web` - Start only Web server
+
+### 🗄️ Database
 - `npm run setup:db` - Set up Docker and database (run this first!)
 - `npm run check:db` - Verify database health
 - `npm run db:generate` - Generate Prisma client
 - `npm run db:migrate` - Run database migrations
 - `npm run db:studio` - Open Prisma Studio
+
+### 🏗️ Build & Test
+- `npm run build` - Build all apps
+- `npm run lint` - Lint all packages
+- `npm run test` - Run tests
+- `npm run clean` - Clean all build artifacts
 
 ### API (`apps/api`)
 - `npm run dev` - Start API in development mode

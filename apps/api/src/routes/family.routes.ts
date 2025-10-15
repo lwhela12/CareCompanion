@@ -58,10 +58,28 @@ router.delete('/families/:familyId/invitations/:invitationId', async (req, res, 
   }
 });
 
+// Invite patient to portal
+router.post('/families/:familyId/invite-patient', async (req, res, next) => {
+  try {
+    await familyController.invitePatient(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Accept invitation (special route that uses token)
 router.post('/invitations/:token/accept', async (req, res, next) => {
   try {
     await familyController.acceptInvitation(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DEV ONLY: Get all invitations (for testing with test emails)
+router.get('/invitations/all', async (req, res, next) => {
+  try {
+    await familyController.getAllInvitations(req, res);
   } catch (error) {
     next(error);
   }

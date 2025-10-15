@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  Pill, 
-  Plus, 
-  Clock, 
+import {
+  Pill,
+  Plus,
+  Clock,
   AlertCircle,
   Calendar,
   RefreshCw,
@@ -13,11 +13,12 @@ import {
   X,
   Loader2
 } from 'lucide-react';
+import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { AddMedicationModal } from '@/components/AddMedicationModal';
 import { EditMedicationModal } from '@/components/EditMedicationModal';
-import { format } from 'date-fns';
 
 interface Medication {
   id: string;
@@ -121,14 +122,32 @@ export function Medications() {
   };
 
   const handleLogMedication = async (scheduleItem: TodayScheduleItem, status: 'given' | 'missed' | 'refused') => {
+    console.log('Medications page - handleLogMedication called:', { scheduleItem, status });
+
     try {
-      await api.post(`/api/v1/medications/${scheduleItem.medicationId}/log`, {
+      console.log('Sending medication log request...');
+      const response = await api.post(`/api/v1/medications/${scheduleItem.medicationId}/log`, {
         scheduledTime: scheduleItem.scheduledTime,
         status,
       });
+      console.log('Medication log response:', response.data);
+
+      // Show success message
+      const statusText = status === 'given' ? 'administered' : status;
+      toast.success(`${scheduleItem.medicationName} marked as ${statusText}`);
+
+      console.log('Fetching updated data...');
       fetchData();
-    } catch (err) {
-      setError('Failed to log medication');
+    } catch (err: any) {
+      console.error('Error logging medication:', err);
+      console.error('Full error object:', {
+        message: err.message,
+        response: err.response,
+        request: err.request,
+        config: err.config
+      });
+      const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to log medication';
+      toast.error(errorMessage);
     }
   };
 
@@ -244,67 +263,89 @@ export function Medications() {
           <p className="text-gray-500 text-center py-8">No medications scheduled for today</p>
         ) : (
           <div className="space-y-3">
-            {todaySchedule.map((item) => (
-              <div
-                key={`${item.medicationId}-${item.scheduledTime}`}
-                className={cn(
-                  "flex items-center justify-between p-4 rounded-xl transition-all",
-                  item.status === 'given' && "bg-green-50",
-                  item.status === 'pending' && "bg-gray-50 hover:bg-gray-100",
-                  (item.status === 'missed' || item.status === 'refused') && "bg-red-50"
-                )}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "text-sm font-semibold min-w-[60px]",
-                    item.status === 'given' && "text-green-700",
-                    item.status === 'pending' && "text-primary-600",
-                    (item.status === 'missed' || item.status === 'refused') && "text-red-700"
-                  )}>
-                    {item.timeString}
+            {todaySchedule.map((item) => {
+              const scheduledTime = new Date(item.scheduledTime);
+              const now = new Date();
+              const isPastTime = scheduledTime <= now;
+              const minutesUntil = Math.floor((scheduledTime.getTime() - now.getTime()) / (1000 * 60));
+              const minutesLate = Math.floor((now.getTime() - scheduledTime.getTime()) / (1000 * 60));
+
+              return (
+                <div
+                  key={`${item.medicationId}-${item.scheduledTime}`}
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-xl transition-all",
+                    item.status === 'given' && "bg-green-50",
+                    item.status === 'pending' && "bg-gray-50 hover:bg-gray-100",
+                    (item.status === 'missed' || item.status === 'refused') && "bg-red-50"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "text-sm font-semibold min-w-[60px]",
+                      item.status === 'given' && "text-green-700",
+                      item.status === 'pending' && "text-primary-600",
+                      (item.status === 'missed' || item.status === 'refused') && "text-red-700"
+                    )}>
+                      {item.timeString}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900">{item.medicationName}</div>
+                      <div className="text-sm text-gray-600">{item.dosage}</div>
+                      {item.status === 'given' && item.givenTime && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Given {item.givenBy ? `by ${item.givenBy.firstName} ${item.givenBy.lastName}` : ''} at{' '}
+                          {format(new Date(item.givenTime), 'h:mm a')}
+                        </div>
+                      )}
+                      {item.status === 'pending' && !isPastTime && (
+                        <div className="text-xs text-blue-600 mt-1">
+                          Due in {minutesUntil} min
+                        </div>
+                      )}
+                      {item.status === 'pending' && isPastTime && minutesLate > 0 && (
+                        <div className="text-xs text-orange-600 mt-1">
+                          {minutesLate} min late
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">{item.medicationName}</div>
-                    <div className="text-sm text-gray-600">{item.dosage}</div>
-                    {item.givenBy && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Given by {item.givenBy.firstName} {item.givenBy.lastName} at{' '}
-                        {format(new Date(item.givenTime!), 'h:mm a')}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {item.status === 'pending' && new Date(item.scheduledTime) <= new Date() ? (
+
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleLogMedication(item, 'given')}
-                      className="p-2 bg-success text-white rounded-lg hover:bg-green-700 transition-colors"
+                      onClick={(e) => {
+                        console.log('Medications page - Given button clicked', { item });
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleLogMedication(item, 'given');
+                      }}
+                      className={cn(
+                        "p-2 text-white rounded-lg hover:bg-green-700 transition-colors",
+                        item.status === 'given' ? 'bg-green-700' : 'bg-success'
+                      )}
                       title="Mark as given"
                     >
                       <Check className="h-5 w-5" />
                     </button>
                     <button
-                      onClick={() => handleLogMedication(item, 'missed')}
-                      className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      onClick={(e) => {
+                        console.log('Medications page - Missed button clicked', { item });
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleLogMedication(item, 'missed');
+                      }}
+                      className={cn(
+                        "p-2 text-white rounded-lg hover:bg-red-700 transition-colors",
+                        item.status === 'missed' || item.status === 'refused' ? 'bg-red-700' : 'bg-red-600'
+                      )}
                       title="Mark as missed"
                     >
                       <X className="h-5 w-5" />
                     </button>
                   </div>
-                ) : (
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center",
-                    item.status === 'given' && "bg-success text-white",
-                    item.status === 'pending' && "bg-gray-200",
-                    (item.status === 'missed' || item.status === 'refused') && "bg-red-600 text-white"
-                  )}>
-                    {item.status === 'given' && <Check className="h-5 w-5" />}
-                    {(item.status === 'missed' || item.status === 'refused') && <X className="h-5 w-5" />}
-                  </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

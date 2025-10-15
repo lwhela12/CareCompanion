@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { 
-  Plus, 
-  Calendar, 
-  BarChart2, 
-  FileText, 
+import { Link } from 'react-router-dom';
+import {
+  Plus,
+  Calendar,
+  BarChart2,
+  FileText,
   Pill,
   Moon,
   Users,
@@ -12,14 +13,19 @@ import {
   CheckCircle,
   Check,
   X,
-  ClipboardList
+  ClipboardList,
+  UserCircle,
+  LogIn,
+  Key
 } from 'lucide-react';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { QuickEntry } from '@/components/QuickEntry';
 import { TodaySchedule } from '@/components/TodaySchedule';
 import { AddTaskModal } from '@/components/AddTaskModal';
+import { UploadDocumentModal } from '@/components/UploadDocumentModal';
 
 const getQuickActions = (todayStats: { tasks: number; appointments: number }) => [
   {
@@ -27,26 +33,30 @@ const getQuickActions = (todayStats: { tasks: number; appointments: number }) =>
     title: 'Quick Entry',
     subtitle: 'Log medication or note',
     color: 'primary',
+    action: 'quick-entry',
   },
   {
     icon: Calendar,
     title: "Today's Schedule",
-    subtitle: todayStats.tasks === 0 && todayStats.appointments === 0 
+    subtitle: todayStats.tasks === 0 && todayStats.appointments === 0
       ? 'All caught up for today!'
       : `${todayStats.tasks} task${todayStats.tasks !== 1 ? 's' : ''} for you, ${todayStats.appointments} appointment${todayStats.appointments !== 1 ? 's' : ''}`,
     color: 'primary',
+    action: 'schedule',
   },
   {
-    icon: ClipboardList,
-    title: 'Add Task',
-    subtitle: 'Create a new care task',
+    icon: UserCircle,
+    title: 'Patient Portal',
+    subtitle: 'View patient checklist',
     color: 'primary',
+    action: 'patient-portal',
   },
   {
     icon: FileText,
     title: 'Upload Document',
     subtitle: 'Medical records & more',
     color: 'primary',
+    action: 'upload',
   },
 ];
 
@@ -119,6 +129,9 @@ export function Dashboard() {
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [showTodaySchedule, setShowTodaySchedule] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [showUploadDocument, setShowUploadDocument] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
   const [todayStats, setTodayStats] = useState({ tasks: 0, appointments: 0 });
   const [recentActivity, setRecentActivity] = useState<Array<{
     time: string;
@@ -342,43 +355,109 @@ export function Dashboard() {
   });
 
   const patientName = familyData?.families[0]?.patient?.firstName || 'your loved one';
+  const patientId = familyData?.families[0]?.patient?.id;
 
-  const handleMedicationLog = async (medication: TodayMedication, status: 'given' | 'missed' | 'refused') => {
+  const handleLoginAsPatient = async () => {
+    if (!patientId) {
+      toast.error('No patient found');
+      return;
+    }
+
     try {
-      await api.post(`/api/v1/medications/${medication.medicationId}/log`, {
-        scheduledTime: medication.scheduledTime,
-        status,
+      const response = await api.post('/api/v1/auth/impersonate', {
+        patientId,
       });
-      
-      // Refresh the medications
-      if (familyData?.families[0]?.patient?.id) {
-        const medsResponse = await api.get(`/api/v1/patients/${familyData.families[0].patient.id}/medications/today`);
-        setTodaysMedications(medsResponse.data.schedule);
-      }
+
+      toast.success(`Logging in as ${patientName}...`);
+
+      // Store impersonation data in sessionStorage
+      sessionStorage.setItem('impersonation', JSON.stringify(response.data));
+
+      // Redirect to patient portal
+      window.location.href = '/patient';
     } catch (error: any) {
-      console.error('Error logging medication:', error);
-      if (error.response?.data) {
-        console.error('Error details:', error.response.data);
-      }
+      console.error('Error impersonating patient:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to login as patient');
     }
   };
 
-  const handleQuickAction = (actionTitle: string) => {
-    switch (actionTitle) {
-      case 'Quick Entry':
+  const handleResetPassword = async () => {
+    if (!patientId) {
+      toast.error('No patient found');
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+
+    try {
+      await api.post('/api/v1/auth/reset-patient-password', {
+        patientId,
+        newPassword,
+      });
+
+      toast.success('Password reset successfully!');
+      setShowResetPassword(false);
+      setNewPassword('');
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to reset password');
+    }
+  };
+
+  const handleMedicationLog = async (medication: TodayMedication, status: 'given' | 'missed' | 'refused') => {
+    console.log('handleMedicationLog called:', { medication, status });
+
+    try {
+      console.log('Sending medication log request...');
+      const response = await api.post(`/api/v1/medications/${medication.medicationId}/log`, {
+        scheduledTime: medication.scheduledTime,
+        status,
+      });
+      console.log('Medication log response:', response.data);
+
+      // Show success message
+      const statusText = status === 'given' ? 'administered' : status;
+      toast.success(`${medication.medicationName} marked as ${statusText}`);
+
+      // Refresh the medications
+      if (familyData?.families[0]?.patient?.id) {
+        console.log('Refreshing medications...');
+        const medsResponse = await api.get(`/api/v1/patients/${familyData.families[0].patient.id}/medications/today`);
+        setTodaysMedications(medsResponse.data.schedule);
+        console.log('Medications refreshed');
+      }
+    } catch (error: any) {
+      console.error('Error logging medication:', error);
+      console.error('Full error object:', {
+        message: error.message,
+        response: error.response,
+        request: error.request,
+        config: error.config
+      });
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to log medication';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'quick-entry':
         setShowQuickEntry(true);
         break;
-      case "Today's Schedule":
+      case 'schedule':
         setShowTodaySchedule(true);
         break;
-      case 'Add Task':
+      case 'add-task':
         setShowAddTask(true);
         break;
-      case 'View Insights':
-        // TODO: Navigate to insights page
+      case 'patient-portal':
+        window.location.href = '/patient';
         break;
-      case 'Upload Document':
-        // TODO: Show document upload modal
+      case 'upload':
+        setShowUploadDocument(true);
         break;
     }
   };
@@ -420,19 +499,42 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Dashboard Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">{greeting}, {userName}</h1>
-        <p className="mt-1 text-lg text-gray-600">
-          {date} • {patientName} had a good night
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">{greeting}, {userName}</h1>
+          <p className="mt-1 text-lg text-gray-600">
+            {date} • {patientName} had a good night
+          </p>
+        </div>
+
+        {/* Patient Actions */}
+        {patientId && (
+          <div className="flex gap-2">
+            <button
+              onClick={handleLoginAsPatient}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              title={`Login as ${patientName}`}
+            >
+              <LogIn className="h-5 w-5" />
+              <span>Login as {patientName}</span>
+            </button>
+            <button
+              onClick={() => setShowResetPassword(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              title="Reset patient password"
+            >
+              <Key className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {getQuickActions(todayStats).map((action) => (
           <button
-            key={action.title}
-            onClick={() => handleQuickAction(action.title)}
+            key={action.action}
+            onClick={() => handleQuickAction(action.action)}
             className="flex items-center gap-4 p-5 bg-white rounded-xl border-2 border-gray-200 hover:border-primary-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
           >
             <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -544,9 +646,12 @@ export function Dashboard() {
               <p className="text-sm text-gray-500 text-center py-4">No medications scheduled today</p>
             ) : (
               todaysMedications.map((med) => {
-                const isPastTime = new Date(med.scheduledTime) <= new Date();
-                const canLog = med.status === 'pending' && isPastTime;
-                
+                const scheduledTime = new Date(med.scheduledTime);
+                const now = new Date();
+                const isPastTime = scheduledTime <= now;
+                const minutesUntil = Math.floor((scheduledTime.getTime() - now.getTime()) / (1000 * 60));
+                const minutesLate = Math.floor((now.getTime() - scheduledTime.getTime()) / (1000 * 60));
+
                 return (
                   <div
                     key={`${med.medicationId}-${med.scheduledTime}`}
@@ -568,35 +673,54 @@ export function Dashboard() {
                     <div className="flex-1">
                       <div className="font-semibold text-gray-900 text-sm">{med.medicationName}</div>
                       <div className="text-xs text-gray-500">{med.dosage}</div>
+                      {med.status === 'given' && med.givenTime && (
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          Given {med.givenBy ? `by ${med.givenBy.firstName}` : ''} at {format(new Date(med.givenTime), 'h:mm a')}
+                        </div>
+                      )}
+                      {med.status === 'pending' && !isPastTime && (
+                        <div className="text-xs text-blue-600 mt-0.5">
+                          Due in {minutesUntil} min
+                        </div>
+                      )}
+                      {med.status === 'pending' && isPastTime && minutesLate > 0 && (
+                        <div className="text-xs text-orange-600 mt-0.5">
+                          {minutesLate} min late
+                        </div>
+                      )}
                     </div>
-                    {canLog ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleMedicationLog(med, 'given')}
-                          className="p-1.5 bg-success text-white rounded hover:bg-green-700 transition-colors"
-                          title="Mark as given"
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleMedicationLog(med, 'missed')}
-                          className="p-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                          title="Mark as missed"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className={cn(
-                        'w-8 h-8 rounded-full flex items-center justify-center',
-                        med.status === 'given' && 'bg-success text-white',
-                        med.status === 'pending' && 'bg-gray-200',
-                        (med.status === 'missed' || med.status === 'refused') && 'bg-red-600 text-white'
-                      )}>
-                        {med.status === 'given' && <CheckCircle className="h-5 w-5" />}
-                        {(med.status === 'missed' || med.status === 'refused') && <X className="h-5 w-5" />}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          console.log('Given button clicked', { med });
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleMedicationLog(med, 'given');
+                        }}
+                        className={cn(
+                          "p-1.5 text-white rounded hover:bg-green-700 transition-colors",
+                          med.status === 'given' ? 'bg-green-700' : 'bg-success'
+                        )}
+                        title="Mark as given"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          console.log('Missed button clicked', { med });
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleMedicationLog(med, 'missed');
+                        }}
+                        className={cn(
+                          "p-1.5 text-white rounded hover:bg-red-700 transition-colors",
+                          med.status === 'missed' || med.status === 'refused' ? 'bg-red-700' : 'bg-red-600'
+                        )}
+                        title="Mark as missed"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 );
               })
@@ -633,6 +757,75 @@ export function Dashboard() {
             handleScheduleUpdate();
           }}
         />
+      )}
+
+      {/* Upload Document Modal */}
+      {showUploadDocument && (
+        <UploadDocumentModal
+          onClose={() => setShowUploadDocument(false)}
+          onUploadComplete={() => {
+            toast.success('Document uploaded successfully!');
+            // Could add document activity to recent activity here
+          }}
+        />
+      )}
+
+      {/* Reset Password Modal */}
+      {showResetPassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-gray-900">Reset Password</h3>
+              <button
+                onClick={() => {
+                  setShowResetPassword(false);
+                  setNewPassword('');
+                }}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-4">
+              Set a new password for {patientName} to use when logging into the patient portal.
+            </p>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                You can share this password with {patientName} so they can login independently.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowResetPassword(false);
+                  setNewPassword('');
+                }}
+                className="flex-1 px-4 py-3 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetPassword}
+                className="flex-1 px-4 py-3 text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors font-semibold"
+              >
+                Reset Password
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

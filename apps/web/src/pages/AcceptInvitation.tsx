@@ -20,6 +20,8 @@ interface InvitationDetails {
     };
     role: string;
   };
+  userType: 'PATIENT' | 'CAREGIVER';
+  redirectTo: string;
 }
 
 export function AcceptInvitation() {
@@ -56,10 +58,11 @@ export function AcceptInvitation() {
       const response = await api.post(`/api/v1/invitations/${token}/accept`);
       setInvitationDetails(response.data);
       setStatus('success');
-      
-      // Redirect to dashboard after 3 seconds
+
+      // Redirect based on user type after 3 seconds
+      const redirectPath = response.data.redirectTo || '/dashboard';
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate(redirectPath);
       }, 3000);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to accept invitation');
@@ -97,17 +100,34 @@ export function AcceptInvitation() {
             <div className="w-20 h-20 bg-success-light rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-10 w-10 text-success" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Welcome to {invitationDetails.family.name}!
-            </h2>
-            <p className="text-gray-600 mb-6">
-              You've been added as a {invitationDetails.family.role.replace('_', ' ')} 
-              for {invitationDetails.family.patient.firstName} {invitationDetails.family.patient.lastName}.
-            </p>
-            <div className="bg-primary-50 rounded-xl p-4 text-sm text-primary-800">
-              <Users className="h-5 w-5 inline mr-2" />
-              Redirecting to your dashboard...
-            </div>
+            {invitationDetails.userType === 'PATIENT' ? (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Your Portal is Ready!
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  You now have access to your patient portal. You can view your daily checklist, track medications, and add notes about your day.
+                </p>
+                <div className="bg-primary-50 rounded-xl p-4 text-sm text-primary-800">
+                  <Heart className="h-5 w-5 inline mr-2" />
+                  Redirecting to your portal...
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Welcome to {invitationDetails.family.name}!
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  You've been added as a {invitationDetails.family.role?.replace('_', ' ')}
+                  for {invitationDetails.family.patient.firstName} {invitationDetails.family.patient.lastName}.
+                </p>
+                <div className="bg-primary-50 rounded-xl p-4 text-sm text-primary-800">
+                  <Users className="h-5 w-5 inline mr-2" />
+                  Redirecting to your dashboard...
+                </div>
+              </>
+            )}
           </div>
         )}
 

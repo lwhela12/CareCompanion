@@ -251,27 +251,40 @@ export function TodaySchedule({ isOpen, onClose, onUpdate }: TodayScheduleProps)
   };
 
   const handleMedicationLog = async (item: ScheduleItem, status: 'given' | 'missed' | 'refused') => {
-    if (!item.medication) return;
-    
+    console.log('TodaySchedule - handleMedicationLog called:', { item, status });
+
+    if (!item.medication) {
+      console.error('No medication data in item:', item);
+      return;
+    }
+
     try {
-      await api.post(`/api/v1/medications/${item.medication.id}/log`, {
+      console.log('Sending medication log request...');
+      const response = await api.post(`/api/v1/medications/${item.medication.id}/log`, {
         scheduledTime: item.time.toISOString(),
         status,
       }, {
         headers: { Authorization: `Bearer ${await getToken()}` }
       });
-      
+      console.log('Medication log response:', response.data);
+
       // Update local state
-      setScheduleItems(items => 
-        items.map(i => 
+      setScheduleItems(items =>
+        items.map(i =>
           i.id === item.id ? { ...i, status } : i
         )
       );
-      
+
       // Notify parent component of update
       if (onUpdate) onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to log medication:', error);
+      console.error('Full error object:', {
+        message: error.message,
+        response: error.response,
+        request: error.request,
+        config: error.config
+      });
       alert('Failed to log medication. Please try again.');
     }
   };
@@ -425,10 +438,13 @@ export function TodaySchedule({ isOpen, onClose, onUpdate }: TodayScheduleProps)
             ) : (
               <div className="space-y-4">
                 {scheduleItems.map((item) => {
-                  const isPast = isBefore(item.time, new Date());
-                  const isUpcoming = isAfter(item.time, new Date()) && 
-                    (item.time.getTime() - new Date().getTime()) < 30 * 60 * 1000; // Within 30 minutes
-                  
+                  const now = new Date();
+                  const isPast = isBefore(item.time, now);
+                  const isUpcoming = isAfter(item.time, now) &&
+                    (item.time.getTime() - now.getTime()) < 30 * 60 * 1000; // Within 30 minutes
+                  const minutesUntil = Math.floor((item.time.getTime() - now.getTime()) / (1000 * 60));
+                  const minutesLate = Math.floor((now.getTime() - item.time.getTime()) / (1000 * 60));
+
                   return (
                     <div
                       key={item.id}
@@ -454,7 +470,7 @@ export function TodaySchedule({ isOpen, onClose, onUpdate }: TodayScheduleProps)
                             {item.status.replace('_', ' ')}
                           </span>
                         </div>
-                        
+
                         <div className="flex items-center gap-4 text-sm text-gray-600">
                           {viewMode === 'pending' && (item.reminderDate || item.dueDate) ? (
                             <>
@@ -478,9 +494,15 @@ export function TodaySchedule({ isOpen, onClose, onUpdate }: TodayScheduleProps)
                             <div className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
                               {format(item.time, 'h:mm a')}
+                              {item.type === 'medication' && !isPast && minutesUntil > 0 && (
+                                <span className="text-blue-600 ml-2">Due in {minutesUntil} min</span>
+                              )}
+                              {item.type === 'medication' && isPast && minutesLate > 0 && item.status === 'pending' && (
+                                <span className="text-orange-600 ml-2">{minutesLate} min late</span>
+                              )}
                             </div>
                           )}
-                          
+
                           {item.assignedTo && (
                             <div className="flex items-center gap-1">
                               <User className="h-4 w-4" />
@@ -488,7 +510,7 @@ export function TodaySchedule({ isOpen, onClose, onUpdate }: TodayScheduleProps)
                             </div>
                           )}
                         </div>
-                        
+
                         {item.description && (
                           <p className="text-sm text-gray-500 mt-1 line-clamp-2">
                             {item.description}
@@ -498,18 +520,34 @@ export function TodaySchedule({ isOpen, onClose, onUpdate }: TodayScheduleProps)
 
                       {/* Action buttons */}
                       <div className="flex items-center gap-2">
-                        {item.type === 'medication' && item.status === 'pending' && isPast && (
+                        {item.type === 'medication' && (
                           <>
                             <button
-                              onClick={() => handleMedicationLog(item, 'given')}
-                              className="p-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                              onClick={(e) => {
+                                console.log('TodaySchedule - Given button clicked', { item });
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleMedicationLog(item, 'given');
+                              }}
+                              className={cn(
+                                "p-2 text-white rounded hover:bg-green-700 transition-colors",
+                                item.status === 'given' ? 'bg-green-700' : 'bg-green-600'
+                              )}
                               title="Mark as given"
                             >
                               <Check className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => handleMedicationLog(item, 'missed')}
-                              className="p-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                              onClick={(e) => {
+                                console.log('TodaySchedule - Missed button clicked', { item });
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleMedicationLog(item, 'missed');
+                              }}
+                              className={cn(
+                                "p-2 text-white rounded hover:bg-red-700 transition-colors",
+                                item.status === 'missed' || item.status === 'refused' ? 'bg-red-700' : 'bg-red-600'
+                              )}
                               title="Mark as missed"
                             >
                               <X className="h-4 w-4" />

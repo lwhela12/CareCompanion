@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "start": "./scripts/start.sh",
+    "start:full": "./scripts/start-full.sh",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
@@ -18,21 +20,28 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "seed:munson": "tsx scripts/run-seed.ts",
     "seed:cleanup": "tsx scripts/cleanup-seed.ts",
+    "cleanup-user": "tsx scripts/cleanup-user.ts",
+    "check-user": "tsx scripts/check-user.ts",
+    "fix-user-type": "tsx scripts/fix-user-type.ts",
     "setup:db": "./scripts/setup-db.sh",
-    "check:db": "./scripts/setup-db.sh"
+    "check:db": "./scripts/setup-db.sh",
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:both": "concurrently -n \"API,WEB\" -c \"blue,magenta\" \"npm run dev:api\" \"npm run dev:web\""
   },
   "devDependencies": {
-    "turbo": "latest",
-    "typescript": "^5.3.3",
     "@types/node": "^20.11.5",
-    "prettier": "^3.2.4",
-    "eslint": "^8.56.0",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "tsx": "^4.7.0"
+    "prettier": "^3.2.4",
+    "tsx": "^4.7.0",
+    "turbo": "latest",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=20.0.0",

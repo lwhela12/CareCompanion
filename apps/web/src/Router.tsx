@@ -5,8 +5,13 @@ import { Patients } from './pages/Patients';
 import { Medications } from './pages/Medications';
 import { Journal } from './pages/Journal';
 import { Family } from './pages/Family';
+import { Documents } from './pages/Documents';
+import { Facts } from './pages/Facts';
+import { PatientPortal } from './pages/PatientPortal';
 import { Onboarding } from './pages/Onboarding';
 import { AcceptInvitation } from './pages/AcceptInvitation';
+import { DevInvitations } from './pages/DevInvitations';
+import { RootRedirect } from './components/RootRedirect';
 import Calendar from './pages/Calendar';
 import SignInPage from './pages/SignIn';
 import SignUpPage from './pages/SignUp';
@@ -26,13 +31,18 @@ export function Router({ isSignedIn }: RouterProps) {
       {/* Protected routes */}
       {isSignedIn ? (
         <>
+          {/* Root redirect - checks user type and redirects appropriately */}
+          <Route index element={<RootRedirect />} />
           <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/" element={<DashboardLayout />}>
-            <Route index element={<Dashboard />} />
+          <Route path="/patient" element={<PatientPortal />} />
+          <Route path="/dev/invitations" element={<DevInvitations />} />
+          <Route element={<DashboardLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="patients" element={<Patients />} />
             <Route path="medications" element={<Medications />} />
             <Route path="journal" element={<Journal />} />
+            <Route path="documents" element={<Documents />} />
+            <Route path="facts" element={<Facts />} />
             <Route path="family" element={<Family />} />
             <Route path="calendar" element={<Calendar />} />
           </Route>

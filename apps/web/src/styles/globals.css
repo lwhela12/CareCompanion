@@ -96,6 +96,20 @@
   .spinner {
     @apply w-10 h-10 border-[3px] border-gray-200 border-t-primary-500 rounded-full animate-spin;
   }
+
+  /* Multi-line truncation utilities (no plugin required) */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 /* Custom animations */
@@ -128,4 +142,3 @@
 *:focus-visible {
   @apply ring-4 ring-primary-100 rounded-lg;
 }
-

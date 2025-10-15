@@ -1,0 +1,234 @@
+Date : 2025-10-14 17:49:17
+Directory : /Users/lucaswhelan/CareCompanion
+Total : 146 files,  37996 codes, 1215 comments, 3108 blanks, all 42319 lines
+
+Languages
++--------------------+------------+------------+------------+------------+------------+
+| language           | files      | code       | comment    | blank      | total      |
++--------------------+------------+------------+------------+------------+------------+
+| JSON               |         10 |     16,176 |          0 |          6 |     16,182 |
+| TypeScript JSX     |         33 |      9,112 |        369 |        896 |     10,377 |
+| TypeScript         |         68 |      7,754 |        681 |      1,214 |      9,649 |
+| Markdown           |          9 |      3,159 |          2 |        686 |      3,847 |
+| HTML               |          2 |        709 |          9 |         94 |        812 |
+| MS SQL             |          6 |        325 |         97 |        113 |        535 |
+| Shell Script       |          4 |        261 |         39 |         52 |        352 |
+| JavaScript         |          8 |        251 |         11 |         15 |        277 |
+| PostCSS            |          1 |        115 |          4 |         26 |        145 |
+| JSON with Comments |          4 |         86 |          3 |          3 |         92 |
+| YAML               |          1 |         48 |          0 |          3 |         51 |
++--------------------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                                              | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                                 |        146 |     37,996 |      1,215 |      3,108 |     42,319 |
+| . (Files)                                                                                                                         |         13 |     18,433 |          0 |        560 |     18,993 |
+| .claude                                                                                                                           |          1 |         12 |          0 |          1 |         13 |
+| apps                                                                                                                              |         93 |     15,753 |        941 |      1,903 |     18,597 |
+| apps/api                                                                                                                          |         46 |      6,012 |        533 |        928 |      7,473 |
+| apps/api (Files)                                                                                                                  |          3 |         76 |          0 |          1 |         77 |
+| apps/api/src                                                                                                                      |         43 |      5,936 |        533 |        927 |      7,396 |
+| apps/api/src (Files)                                                                                                              |          1 |         54 |          7 |         11 |         72 |
+| apps/api/src/config                                                                                                               |          1 |         47 |         12 |         13 |         72 |
+| apps/api/src/controllers                                                                                                          |          8 |      3,580 |        308 |        557 |      4,445 |
+| apps/api/src/jobs                                                                                                                 |          1 |          5 |          5 |          3 |         13 |
+| apps/api/src/middleware                                                                                                           |          5 |        310 |         21 |         36 |        367 |
+| apps/api/src/routes                                                                                                               |         17 |      1,040 |         90 |        169 |      1,299 |
+| apps/api/src/services                                                                                                             |          6 |        781 |         76 |        123 |        980 |
+| apps/api/src/services (Files)                                                                                                     |          5 |        488 |         69 |         91 |        648 |
+| apps/api/src/services/ai                                                                                                          |          1 |        293 |          7 |         32 |        332 |
+| apps/api/src/types                                                                                                                |          1 |         30 |          0 |          3 |         33 |
+| apps/api/src/utils                                                                                                                |          3 |         89 |         14 |         12 |        115 |
+| apps/web                                                                                                                          |         47 |      9,741 |        408 |        975 |     11,124 |
+| apps/web (Files)                                                                                                                  |          8 |        228 |          4 |          5 |        237 |
+| apps/web/src                                                                                                                      |         39 |      9,513 |        404 |        970 |     10,887 |
+| apps/web/src (Files)                                                                                                              |          3 |        107 |          3 |         12 |        122 |
+| apps/web/src/components                                                                                                           |         15 |      4,449 |        198 |        464 |      5,111 |
+| apps/web/src/components (Files)                                                                                                   |         14 |      4,299 |        189 |        452 |      4,940 |
+| apps/web/src/components/layouts                                                                                                   |          1 |        150 |          9 |         12 |        171 |
+| apps/web/src/hooks                                                                                                                |          2 |        223 |         24 |         41 |        288 |
+| apps/web/src/lib                                                                                                                  |          2 |         53 |          7 |          6 |         66 |
+| apps/web/src/pages                                                                                                                |         14 |      4,495 |        164 |        409 |      5,068 |
+| apps/web/src/providers                                                                                                            |          1 |         61 |          4 |         11 |         76 |
+| apps/web/src/styles                                                                                                               |          1 |        115 |          4 |         26 |        145 |
+| apps/web/src/types                                                                                                                |          1 |         10 |          0 |          1 |         11 |
+| design                                                                                                                            |          2 |      1,440 |         11 |        198 |      1,649 |
+| design (Files)                                                                                                                    |          1 |        748 |          2 |        104 |        854 |
+| design/mockups                                                                                                                    |          1 |        692 |          9 |         94 |        795 |
+| packages                                                                                                                          |         22 |        907 |        144 |        203 |      1,254 |
+| packages/database                                                                                                                 |         11 |        422 |         97 |        124 |        643 |
+| packages/database (Files)                                                                                                         |          1 |         26 |          0 |          1 |         27 |
+| packages/database/prisma                                                                                                          |          6 |        326 |         94 |        119 |        539 |
+| packages/database/prisma (Files)                                                                                                  |          1 |         54 |          6 |         15 |         75 |
+| packages/database/prisma/migrations                                                                                               |          5 |        272 |         88 |        104 |        464 |
+| packages/database/prisma/migrations/20250726232206_initial_schema                                                                 |          1 |        237 |         75 |         89 |        401 |
+| packages/database/prisma/migrations/20250727165753_add_recurrence_to_care_tasks                                                   |          1 |          6 |          3 |          3 |         12 |
+| packages/database/prisma/migrations/20250727184116_add_reminder_date_to_tasks                                                     |          1 |          1 |          1 |          1 |          3 |
+| packages/database/prisma/migrations/20251014001653_add_patient_checklist                                                          |          1 |         27 |          8 |         10 |         45 |
+| packages/database/prisma/migrations/20251014004524_add_scheduled_time_to_checklist                                                |          1 |          1 |          1 |          1 |          3 |
+| packages/database/src                                                                                                             |          4 |         70 |          3 |          4 |         77 |
+| packages/shared                                                                                                                   |         11 |        485 |         47 |         79 |        611 |
+| packages/shared (Files)                                                                                                           |          2 |         34 |          0 |          0 |         34 |
+| packages/shared/src                                                                                                               |          9 |        451 |         47 |         79 |        577 |
+| packages/shared/src (Files)                                                                                                       |          1 |          4 |          0 |          0 |          4 |
+| packages/shared/src/constants                                                                                                     |          1 |         61 |         12 |         10 |         83 |
+| packages/shared/src/types                                                                                                         |          2 |        107 |          9 |         11 |        127 |
+| packages/shared/src/utils                                                                                                         |          4 |        183 |         15 |         41 |        239 |
+| packages/shared/src/validation                                                                                                    |          1 |         96 |         11 |         17 |        124 |
+| scripts                                                                                                                           |         15 |      1,451 |        119 |        243 |      1,813 |
++-----------------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| filename                                                                                                                          | language           | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| /Users/lucaswhelan/CareCompanion/.claude/settings.local.json                                                                      | JSON               |         12 |          0 |          1 |         13 |
+| /Users/lucaswhelan/CareCompanion/.eslintrc.js                                                                                     | JavaScript         |         33 |          0 |          0 |         33 |
+| /Users/lucaswhelan/CareCompanion/Claude.md                                                                                        | Markdown           |        281 |          0 |         69 |        350 |
+| /Users/lucaswhelan/CareCompanion/Design_Document.md                                                                               | Markdown           |      1,153 |          0 |        182 |      1,335 |
+| /Users/lucaswhelan/CareCompanion/LOCALSTACK_SETUP.md                                                                              | Markdown           |        150 |          0 |         56 |        206 |
+| /Users/lucaswhelan/CareCompanion/Product_Requirements_Document.md                                                                 | Markdown           |        288 |          0 |         79 |        367 |
+| /Users/lucaswhelan/CareCompanion/QUICK_START.md                                                                                   | Markdown           |        123 |          0 |         48 |        171 |
+| /Users/lucaswhelan/CareCompanion/README.md                                                                                        | Markdown           |        163 |          0 |         56 |        219 |
+| /Users/lucaswhelan/CareCompanion/TESTING_INVITATIONS.md                                                                           | Markdown           |        169 |          0 |         65 |        234 |
+| /Users/lucaswhelan/CareCompanion/apps/api/package.json                                                                            | JSON               |         56 |          0 |          1 |         57 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/config/index.ts                                                                     | TypeScript         |         47 |         12 |         13 |         72 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/controllers/auth.controller.ts                                                      | TypeScript         |        243 |         20 |         37 |        300 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/controllers/careTask.controller.ts                                                  | TypeScript         |        750 |         87 |        131 |        968 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/controllers/document.controller.ts                                                  | TypeScript         |        462 |         52 |         82 |        596 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/controllers/fact.controller.ts                                                      | TypeScript         |        120 |          0 |         16 |        136 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/controllers/family.controller.ts                                                    | TypeScript         |        726 |         54 |         86 |        866 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/controllers/journal.controller.ts                                                   | TypeScript         |        378 |         43 |         74 |        495 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/controllers/medication.controller.ts                                                | TypeScript         |        520 |         29 |         72 |        621 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/controllers/patient.controller.ts                                                   | TypeScript         |        381 |         23 |         59 |        463 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/index.ts                                                                            | TypeScript         |         54 |          7 |         11 |         72 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/jobs/index.ts                                                                       | TypeScript         |          5 |          5 |          3 |         13 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/middleware/async.ts                                                                 | TypeScript         |          6 |          3 |          1 |         10 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/middleware/auth.ts                                                                  | TypeScript         |        171 |         10 |         21 |        202 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/middleware/error.ts                                                                 | TypeScript         |         69 |          5 |          7 |         81 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/middleware/upload.ts                                                                | TypeScript         |         32 |          3 |          4 |         39 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/middleware/validate.ts                                                              | TypeScript         |         32 |          0 |          3 |         35 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/ai.ts                                                                        | TypeScript         |        102 |          6 |         16 |        124 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/auth.ts                                                                      | TypeScript         |        121 |         11 |         18 |        150 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/careTask.routes.ts                                                           | TypeScript         |         62 |          2 |         11 |         75 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/careTask.ts                                                                  | TypeScript         |          6 |          1 |          3 |         10 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/debug.routes.ts                                                              | TypeScript         |         45 |          5 |          8 |         58 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/document.routes.ts                                                           | TypeScript         |         62 |          9 |         12 |         83 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/document.ts                                                                  | TypeScript         |          6 |          1 |          3 |         10 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/fact.routes.ts                                                               | TypeScript         |         12 |          0 |          5 |         17 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/family.routes.ts                                                             | TypeScript         |         69 |          7 |         12 |         88 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/family.ts                                                                    | TypeScript         |        156 |         11 |         20 |        187 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/index.ts                                                                     | TypeScript         |         32 |         11 |         12 |         55 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/journal.routes.ts                                                            | TypeScript         |         15 |          3 |          5 |         23 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/journal.ts                                                                   | TypeScript         |          6 |          1 |          3 |         10 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/medication.routes.ts                                                         | TypeScript         |         62 |          3 |         11 |         76 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/medication.ts                                                                | TypeScript         |          6 |          1 |          3 |         10 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/patient.routes.ts                                                            | TypeScript         |         48 |          7 |         10 |         65 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/routes/patient.ts                                                                   | TypeScript         |        230 |         11 |         17 |        258 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/services/ai/openai.service.ts                                                       | TypeScript         |        293 |          7 |         32 |        332 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/services/email.service.ts                                                           | TypeScript         |         83 |          4 |         14 |        101 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/services/factExtraction.service.ts                                                  | TypeScript         |         68 |          6 |         12 |         86 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/services/factsHeader.service.ts                                                     | TypeScript         |         29 |          1 |          5 |         35 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/services/recurrence.service.ts                                                      | TypeScript         |        171 |         28 |         34 |        233 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/services/s3.service.ts                                                              | TypeScript         |        137 |         30 |         26 |        193 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/types/index.ts                                                                      | TypeScript         |         30 |          0 |          3 |         33 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/utils/errors.ts                                                                     | TypeScript         |         49 |          3 |          4 |         56 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/utils/logger.ts                                                                     | TypeScript         |         25 |          1 |          3 |         29 |
+| /Users/lucaswhelan/CareCompanion/apps/api/src/utils/tokens.ts                                                                     | TypeScript         |         15 |         10 |          5 |         30 |
+| /Users/lucaswhelan/CareCompanion/apps/api/tsconfig.json                                                                           | JSON with Comments |         19 |          0 |          0 |         19 |
+| /Users/lucaswhelan/CareCompanion/apps/api/tsconfig.tsbuildinfo                                                                    | JSON               |          1 |          0 |          0 |          1 |
+| /Users/lucaswhelan/CareCompanion/apps/web/.eslintrc.cjs                                                                           | JavaScript         |         20 |          0 |          0 |         20 |
+| /Users/lucaswhelan/CareCompanion/apps/web/index.html                                                                              | HTML               |         17 |          0 |          0 |         17 |
+| /Users/lucaswhelan/CareCompanion/apps/web/package.json                                                                            | JSON               |         60 |          0 |          1 |         61 |
+| /Users/lucaswhelan/CareCompanion/apps/web/postcss.config.js                                                                       | JavaScript         |          6 |          0 |          0 |          6 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/App.tsx                                                                             | TypeScript JSX     |         42 |          0 |          5 |         47 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/Router.tsx                                                                          | TypeScript JSX     |         49 |          3 |          4 |         56 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/AddAppointmentModal.tsx                                                  | TypeScript JSX     |        332 |         19 |         32 |        383 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/AddMedicationModal.tsx                                                   | TypeScript JSX     |        360 |          5 |         31 |        396 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/AddTaskModal.tsx                                                         | TypeScript JSX     |        223 |         14 |         26 |        263 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/ChatWidget.tsx                                                           | TypeScript JSX     |        261 |          4 |         19 |        284 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/EditAppointmentModal.tsx                                                 | TypeScript JSX     |        364 |         30 |         42 |        436 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/EditMedicationModal.tsx                                                  | TypeScript JSX     |        375 |          5 |         31 |        411 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/EventDetailsModal.tsx                                                    | TypeScript JSX     |        267 |         14 |         35 |        316 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/FamilyMembers.tsx                                                        | TypeScript JSX     |        346 |          6 |         27 |        379 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/PatientPortalAccess.tsx                                                  | TypeScript JSX     |        264 |          6 |         26 |        296 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/QuickEntry.tsx                                                           | TypeScript JSX     |        284 |          5 |         34 |        323 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/RootRedirect.tsx                                                         | TypeScript JSX     |         46 |         11 |         10 |         67 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/TasksOverview.tsx                                                        | TypeScript JSX     |        254 |          8 |         36 |        298 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/TodaySchedule.tsx                                                        | TypeScript JSX     |        502 |         36 |         52 |        590 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/UploadDocumentModal.tsx                                                  | TypeScript JSX     |        421 |         26 |         51 |        498 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/components/layouts/DashboardLayout.tsx                                              | TypeScript JSX     |        150 |          9 |         12 |        171 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/hooks/useAudioRecorder.ts                                                           | TypeScript         |        178 |         19 |         34 |        231 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/hooks/useOnboarding.ts                                                              | TypeScript         |         45 |          5 |          7 |         57 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/lib/api.ts                                                                          | TypeScript         |         48 |          7 |          5 |         60 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/lib/utils.ts                                                                        | TypeScript         |          5 |          0 |          1 |          6 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/main.tsx                                                                            | TypeScript JSX     |         16 |          0 |          3 |         19 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/AcceptInvitation.tsx                                                          | TypeScript JSX     |        148 |          3 |         13 |        164 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Calendar.tsx                                                                  | TypeScript JSX     |        381 |         22 |         37 |        440 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Dashboard.tsx                                                                 | TypeScript JSX     |        718 |         38 |         76 |        832 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/DevInvitations.tsx                                                            | TypeScript JSX     |        180 |          9 |         15 |        204 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Documents.tsx                                                                 | TypeScript JSX     |        600 |         25 |         42 |        667 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Facts.tsx                                                                     | TypeScript JSX     |        139 |          0 |         15 |        154 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Family.tsx                                                                    | TypeScript JSX     |        108 |          5 |         13 |        126 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Journal.tsx                                                                   | TypeScript JSX     |        568 |          9 |         58 |        635 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Medications.tsx                                                               | TypeScript JSX     |        421 |          9 |         36 |        466 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Onboarding.tsx                                                                | TypeScript JSX     |        372 |          7 |         22 |        401 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/PatientPortal.tsx                                                             | TypeScript JSX     |        617 |         23 |         64 |        704 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/Patients.tsx                                                                  | TypeScript JSX     |         15 |          0 |          1 |         16 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/SignIn.tsx                                                                    | TypeScript JSX     |        102 |          6 |          7 |        115 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/pages/SignUp.tsx                                                                    | TypeScript JSX     |        126 |          8 |         10 |        144 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/providers/ApiProvider.tsx                                                           | TypeScript JSX     |         61 |          4 |         11 |         76 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/styles/globals.css                                                                  | PostCSS            |        115 |          4 |         26 |        145 |
+| /Users/lucaswhelan/CareCompanion/apps/web/src/types/clerk.d.ts                                                                    | TypeScript         |         10 |          0 |          1 |         11 |
+| /Users/lucaswhelan/CareCompanion/apps/web/tailwind.config.js                                                                      | JavaScript         |         76 |          1 |          0 |         77 |
+| /Users/lucaswhelan/CareCompanion/apps/web/tsconfig.json                                                                           | JSON with Comments |         28 |          3 |          3 |         34 |
+| /Users/lucaswhelan/CareCompanion/apps/web/tsconfig.tsbuildinfo                                                                    | JSON               |          1 |          0 |          0 |          1 |
+| /Users/lucaswhelan/CareCompanion/apps/web/vite.config.ts                                                                          | TypeScript         |         20 |          0 |          1 |         21 |
+| /Users/lucaswhelan/CareCompanion/design/UI_Design.md                                                                              | Markdown           |        748 |          2 |        104 |        854 |
+| /Users/lucaswhelan/CareCompanion/design/mockups/dashboard.html                                                                    | HTML               |        692 |          9 |         94 |        795 |
+| /Users/lucaswhelan/CareCompanion/docker-compose.yml                                                                               | YAML               |         48 |          0 |          3 |         51 |
+| /Users/lucaswhelan/CareCompanion/package-lock.json                                                                                | JSON               |     15,917 |          0 |          1 |     15,918 |
+| /Users/lucaswhelan/CareCompanion/package.json                                                                                     | JSON               |         51 |          0 |          1 |         52 |
+| /Users/lucaswhelan/CareCompanion/packages/database/package.json                                                                   | JSON               |         26 |          0 |          1 |         27 |
+| /Users/lucaswhelan/CareCompanion/packages/database/prisma/migrate-clerk-ids.ts                                                    | TypeScript         |         54 |          6 |         15 |         75 |
+| /Users/lucaswhelan/CareCompanion/packages/database/prisma/migrations/20250726232206_initial_schema/migration.sql                  | MS SQL             |        237 |         75 |         89 |        401 |
+| /Users/lucaswhelan/CareCompanion/packages/database/prisma/migrations/20250727165753_add_recurrence_to_care_tasks/migration.sql    | MS SQL             |          6 |          3 |          3 |         12 |
+| /Users/lucaswhelan/CareCompanion/packages/database/prisma/migrations/20250727184116_add_reminder_date_to_tasks/migration.sql      | MS SQL             |          1 |          1 |          1 |          3 |
+| /Users/lucaswhelan/CareCompanion/packages/database/prisma/migrations/20251014001653_add_patient_checklist/migration.sql           | MS SQL             |         27 |          8 |         10 |         45 |
+| /Users/lucaswhelan/CareCompanion/packages/database/prisma/migrations/20251014004524_add_scheduled_time_to_checklist/migration.sql | MS SQL             |          1 |          1 |          1 |          3 |
+| /Users/lucaswhelan/CareCompanion/packages/database/src/client.js                                                                  | JavaScript         |         10 |          1 |          0 |         11 |
+| /Users/lucaswhelan/CareCompanion/packages/database/src/client.ts                                                                  | TypeScript         |         10 |          0 |          3 |         13 |
+| /Users/lucaswhelan/CareCompanion/packages/database/src/index.js                                                                   | JavaScript         |         22 |          1 |          0 |         23 |
+| /Users/lucaswhelan/CareCompanion/packages/database/src/index.ts                                                                   | TypeScript         |         28 |          1 |          1 |         30 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/package.json                                                                     | JSON               |         19 |          0 |          0 |         19 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/constants/index.ts                                                           | TypeScript         |         61 |         12 |         10 |         83 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/index.ts                                                                     | TypeScript         |          4 |          0 |          0 |          4 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/types/errors.ts                                                              | TypeScript         |         19 |          3 |          2 |         24 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/types/index.ts                                                               | TypeScript         |         88 |          6 |          9 |        103 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/utils/date.ts                                                                | TypeScript         |         61 |          0 |         10 |         71 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/utils/format.ts                                                              | TypeScript         |         46 |          0 |         11 |         57 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/utils/index.ts                                                               | TypeScript         |          3 |          0 |          0 |          3 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/utils/privacy.ts                                                             | TypeScript         |         73 |         15 |         20 |        108 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/src/validation/index.ts                                                          | TypeScript         |         96 |         11 |         17 |        124 |
+| /Users/lucaswhelan/CareCompanion/packages/shared/tsconfig.json                                                                    | JSON with Comments |         15 |          0 |          0 |         15 |
+| /Users/lucaswhelan/CareCompanion/scripts/README.md                                                                                | Markdown           |         84 |          0 |         27 |        111 |
+| /Users/lucaswhelan/CareCompanion/scripts/check-user.ts                                                                            | TypeScript         |         64 |          3 |         14 |         81 |
+| /Users/lucaswhelan/CareCompanion/scripts/cleanup-seed.ts                                                                          | TypeScript         |         59 |          3 |         12 |         74 |
+| /Users/lucaswhelan/CareCompanion/scripts/cleanup-user.ts                                                                          | TypeScript         |         81 |         13 |         21 |        115 |
+| /Users/lucaswhelan/CareCompanion/scripts/fix-add-patient-memberships.ts                                                           | TypeScript         |         26 |          0 |          4 |         30 |
+| /Users/lucaswhelan/CareCompanion/scripts/fix-user-type.ts                                                                         | TypeScript         |         66 |          4 |         14 |         84 |
+| /Users/lucaswhelan/CareCompanion/scripts/init-localstack.sh                                                                       | Shell Script       |         60 |          9 |         12 |         81 |
+| /Users/lucaswhelan/CareCompanion/scripts/migrate-to-public-schema.sql                                                             | MS SQL             |         53 |          9 |          9 |         71 |
+| /Users/lucaswhelan/CareCompanion/scripts/run-seed.ts                                                                              | TypeScript         |         10 |          0 |          3 |         13 |
+| /Users/lucaswhelan/CareCompanion/scripts/seed-munson-family.ts                                                                    | TypeScript         |        663 |         40 |         72 |        775 |
+| /Users/lucaswhelan/CareCompanion/scripts/setup-db.sh                                                                              | Shell Script       |         77 |         10 |         16 |        103 |
+| /Users/lucaswhelan/CareCompanion/scripts/start-full.sh                                                                            | Shell Script       |         98 |         13 |         15 |        126 |
+| /Users/lucaswhelan/CareCompanion/scripts/start.sh                                                                                 | Shell Script       |         26 |          7 |          9 |         42 |
+| /Users/lucaswhelan/CareCompanion/scripts/test-db.js                                                                               | JavaScript         |         26 |          3 |          7 |         36 |
+| /Users/lucaswhelan/CareCompanion/scripts/test-setup.js                                                                            | JavaScript         |         58 |          5 |          8 |         71 |
+| /Users/lucaswhelan/CareCompanion/tsconfig.json                                                                                    | JSON with Comments |         24 |          0 |          0 |         24 |
+| /Users/lucaswhelan/CareCompanion/turbo.json                                                                                       | JSON               |         33 |          0 |          0 |         33 |
+| Total                                                                                                                             |                    |     37,996 |      1,215 |      3,108 |     42,319 |
++-----------------------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+

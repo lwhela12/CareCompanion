@@ -12,7 +12,11 @@ const TEST_ACCOUNTS = {
     clerkId: null // Will be created with mock ID until real account is made
   },
   jay: {
-    email: 'jay@test.com', 
+    email: 'jay@test.com',
+    clerkId: null // Will be created with mock ID until real account is made
+  },
+  sue: {
+    email: 'sue@test.com',
     clerkId: null // Will be created with mock ID until real account is made
   }
 };
@@ -22,18 +26,18 @@ async function findOrCreateUserByEmail(email: string, firstName: string, lastNam
   let user = await prisma.user.findUnique({
     where: { email }
   });
-  
+
   if (user) {
     console.log(`✅ Found existing user: ${user.firstName} ${user.lastName}`);
     return user;
   }
-  
+
   // Try to find by clerkId if provided
   if (clerkId) {
     user = await prisma.user.findUnique({
       where: { clerkId }
     });
-    
+
     if (user) {
       console.log(`✅ Found user by Clerk ID, updating email: ${user.firstName} ${user.lastName}`);
       // Update the user with the correct email
@@ -44,42 +48,95 @@ async function findOrCreateUserByEmail(email: string, firstName: string, lastNam
       return user;
     }
   }
-  
+
   // If no user found, create one (assumes Clerk account exists)
   console.log(`🔧 Creating CareCompanion user record for ${email}...`);
-  
+
   // Generate a mock Clerk ID if not provided (for testing)
   const generatedClerkId = clerkId || `user_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   try {
     user = await prisma.user.create({
       data: {
         clerkId: generatedClerkId,
         email,
         firstName,
-        lastName
+        lastName,
+        userType: 'CAREGIVER' // Default for caregivers
       }
     });
-    
+
     console.log(`✅ Created user: ${user.firstName} ${user.lastName}`);
     return user;
   } catch (error: any) {
     if (error.code === 'P2002') {
       // Unique constraint failed, try to find the conflicting user
       console.log(`⚠️  User creation failed due to unique constraint, searching for existing user...`);
-      
+
       if (error.meta?.target?.includes('email')) {
         user = await prisma.user.findUnique({ where: { email } });
       } else if (error.meta?.target?.includes('clerk_id')) {
         user = await prisma.user.findUnique({ where: { clerkId: generatedClerkId } });
       }
-      
+
       if (user) {
         console.log(`✅ Found conflicting user, using existing: ${user.firstName} ${user.lastName}`);
         return user;
       }
     }
-    
+
+    throw error;
+  }
+}
+
+async function findOrCreatePatientUser(email: string, firstName: string, lastName: string, patientId: string, clerkId?: string) {
+  // First try to find existing user by email
+  let user = await prisma.user.findUnique({
+    where: { email }
+  });
+
+  if (user) {
+    console.log(`✅ Found existing patient user: ${user.firstName} ${user.lastName}`);
+    return user;
+  }
+
+  // If no user found, create one
+  console.log(`🔧 Creating patient user record for ${email}...`);
+
+  // Generate a mock Clerk ID if not provided (for testing)
+  const generatedClerkId = clerkId || `user_mock_patient_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  try {
+    user = await prisma.user.create({
+      data: {
+        clerkId: generatedClerkId,
+        email,
+        firstName,
+        lastName,
+        userType: 'PATIENT',
+        linkedPatientId: patientId
+      }
+    });
+
+    console.log(`✅ Created patient user: ${user.firstName} ${user.lastName}`);
+    return user;
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      // Unique constraint failed, try to find the conflicting user
+      console.log(`⚠️  Patient user creation failed due to unique constraint, searching for existing user...`);
+
+      if (error.meta?.target?.includes('email')) {
+        user = await prisma.user.findUnique({ where: { email } });
+      } else if (error.meta?.target?.includes('clerk_id')) {
+        user = await prisma.user.findUnique({ where: { clerkId: generatedClerkId } });
+      }
+
+      if (user) {
+        console.log(`✅ Found conflicting user, using existing: ${user.firstName} ${user.lastName}`);
+        return user;
+      }
+    }
+
     throw error;
   }
 }
@@ -117,6 +174,32 @@ async function seedMunsonFamily() {
         medicalRecordNumber: 'MRN-001234'
       }
     });
+
+    // 3b. Create patient user account for Sue
+    console.log('👤 Creating patient user account for Sue...');
+    const sueUser = await findOrCreatePatientUser(
+      TEST_ACCOUNTS.sue.email,
+      'Sue',
+      'Munson',
+      patient.id,
+      TEST_ACCOUNTS.sue.clerkId
+    );
+
+    // Ensure the patient user is also a FamilyMember (read_only) for consistent access patterns
+    const existingSueMember = await prisma.familyMember.findFirst({
+      where: { userId: sueUser.id, familyId: family.id }
+    });
+    if (!existingSueMember) {
+      await prisma.familyMember.create({
+        data: {
+          userId: sueUser.id,
+          familyId: family.id,
+          role: 'read_only',
+          relationship: 'patient',
+          isActive: true,
+        }
+      });
+    }
 
     // 4. Create family members
     console.log('👥 Adding family members...');
@@ -653,10 +736,14 @@ async function seedMunsonFamily() {
    📅 Appointments: ${upcomingAppointments.length} upcoming appointments
    ✅ Daily Tasks: Medication reminders and care tasks
 
-🔐 Login with:
+🔐 Caregiver Login:
    - nic@test.com (Primary caregiver, full access)
-   - michael@test.com (Partner, handles appointments)  
+   - michael@test.com (Partner, handles appointments)
    - jay@test.com (Brother, mostly read-only, periodic visits)
+
+🔐 Patient Login:
+   - sue@test.com (Patient, can view checklist and log tasks)
+   - Caregivers can also impersonate Sue via "Login as Patient" button
 
 💡 Note: If using accounts that haven't completed CareCompanion onboarding,
    CareCompanion user records were created automatically. You can now log in

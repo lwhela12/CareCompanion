@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { validate } from '../middleware/validate';
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
+import { authenticate } from '../middleware/auth';
+import { authController } from '../controllers/auth.controller';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -115,6 +117,33 @@ router.get('/me', async (req, res) => {
         message: 'Failed to fetch user',
       },
     });
+  }
+});
+
+// Impersonate patient (caregiver logs in as patient)
+router.post('/impersonate', authenticate, async (req, res, next) => {
+  try {
+    await authController.impersonatePatient(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Exit impersonation
+router.post('/exit-impersonation', authenticate, async (req, res, next) => {
+  try {
+    await authController.exitImpersonation(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Reset patient password (caregiver only)
+router.post('/reset-patient-password', authenticate, async (req, res, next) => {
+  try {
+    await authController.resetPatientPassword(req, res);
+  } catch (error) {
+    next(error);
   }
 });
 

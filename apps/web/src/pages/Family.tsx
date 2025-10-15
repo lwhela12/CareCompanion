@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FamilyMembers } from '@/components/FamilyMembers';
+import { PatientPortalAccess } from '@/components/PatientPortalAccess';
 import { api } from '@/lib/api';
 import { Loader2, Heart } from 'lucide-react';
 
@@ -108,8 +109,15 @@ export function Family() {
         </div>
       </div>
 
-      <FamilyMembers 
-        familyId={familyData.id} 
+      {/* Patient Portal Access */}
+      <PatientPortalAccess
+        familyId={familyData.id}
+        patientId={familyData.patient.id}
+        patientName={`${familyData.patient.firstName} ${familyData.patient.lastName}`}
+      />
+
+      <FamilyMembers
+        familyId={familyData.id}
         currentUserRole={familyData.currentUserRole}
         members={familyData.members}
       />

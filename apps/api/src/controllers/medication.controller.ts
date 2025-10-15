@@ -368,57 +368,96 @@ export class MedicationController {
 
     const medication = await prisma.medication.findUnique({
       where: { id: medicationId },
+      include: {
+        patient: {
+          include: {
+            family: true,
+          },
+        },
+      },
     });
 
     if (!medication) {
       throw new ApiError(ErrorCodes.NOT_FOUND, 'Medication not found', 404);
     }
 
-    // Create or update the log
-    const log = await prisma.medicationLog.upsert({
-      where: {
-        medicationId_scheduledTime: {
-          medicationId,
-          scheduledTime: new Date(scheduledTime),
-        },
-      },
-      update: {
-        status: status.toUpperCase() as MedicationStatus,
-        givenTime: status === 'given' ? new Date() : null,
-        givenById: status === 'given' ? user.id : null,
-        notes,
-      },
-      create: {
-        medicationId,
-        scheduledTime: new Date(scheduledTime),
-        status: status.toUpperCase() as MedicationStatus,
-        givenTime: status === 'given' ? new Date() : null,
-        givenById: status === 'given' ? user.id : null,
-        notes,
-      },
-      include: {
-        givenBy: {
-          select: {
-            firstName: true,
-            lastName: true,
+    // Create or update log and create journal entry in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create or update the medication log
+      const log = await tx.medicationLog.upsert({
+        where: {
+          medicationId_scheduledTime: {
+            medicationId,
+            scheduledTime: new Date(scheduledTime),
           },
         },
-      },
-    });
-
-    // Update pill count if given
-    if (status === 'given' && medication.currentSupply && medication.dosageAmount) {
-      await prisma.medication.update({
-        where: { id: medicationId },
-        data: {
-          currentSupply: {
-            decrement: medication.dosageAmount,
+        update: {
+          status: status.toUpperCase() as MedicationStatus,
+          givenTime: status === 'given' ? new Date() : null,
+          givenById: status === 'given' ? user.id : null,
+          notes,
+        },
+        create: {
+          medicationId,
+          scheduledTime: new Date(scheduledTime),
+          status: status.toUpperCase() as MedicationStatus,
+          givenTime: status === 'given' ? new Date() : null,
+          givenById: status === 'given' ? user.id : null,
+          completedById: user.id,
+          notes,
+        },
+        include: {
+          givenBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
           },
         },
       });
-    }
 
-    res.json({ log });
+      // Create journal entry
+      const statusLabel = status === 'given' ? 'Took' : status === 'missed' ? 'Missed' : 'Refused';
+      const journalContent = notes
+        ? `${statusLabel} medication: ${medication.name} (${medication.dosage})\n\nNotes: ${notes}`
+        : `${statusLabel} medication: ${medication.name} (${medication.dosage})`;
+
+      const journalEntry = await tx.journalEntry.create({
+        data: {
+          familyId: medication.patient.familyId,
+          userId: user.id,
+          content: journalContent,
+          isPrivate: false,
+          attachmentUrls: [],
+          analysisData: {
+            source: 'patient_medication',
+            medicationId: medication.id,
+            medicationName: medication.name,
+            dosage: medication.dosage,
+            scheduledTime: scheduledTime,
+            status: status,
+            hasNotes: !!notes,
+            completedByType: user.userType,
+          },
+        },
+      });
+
+      // Update pill count if given
+      if (status === 'given' && medication.currentSupply && medication.dosageAmount) {
+        await tx.medication.update({
+          where: { id: medicationId },
+          data: {
+            currentSupply: {
+              decrement: medication.dosageAmount,
+            },
+          },
+        });
+      }
+
+      return { log, journalEntry };
+    });
+
+    res.json({ log: result.log, journalEntry: result.journalEntry });
   }
 
   // Update medication

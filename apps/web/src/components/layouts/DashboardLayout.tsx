@@ -7,20 +7,29 @@ import {
   Book,
   Users2,
   Calendar,
+  FileText,
   Menu,
   X,
   Loader2,
+  Code,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { ChatWidget } from '@/components/ChatWidget';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Medications', href: '/medications', icon: Pill },
   { name: 'Journal', href: '/journal', icon: Book },
+  { name: 'Documents', href: '/documents', icon: FileText },
+  { name: 'Facts', href: '/facts', icon: FileText },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Family', href: '/family', icon: Users2 },
+];
+
+const devNavigation = [
+  { name: 'Dev: Invitations', href: '/dev/invitations', icon: Code },
 ];
 
 export function DashboardLayout() {
@@ -86,6 +95,37 @@ export function DashboardLayout() {
                 </li>
               ))}
             </ul>
+
+            {/* Dev Tools Section */}
+            {import.meta.env.DEV && (
+              <div className="mt-8">
+                <div className="px-4 mb-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Dev Tools
+                  </p>
+                </div>
+                <ul className="space-y-2">
+                  {devNavigation.map((item) => (
+                    <li key={item.name}>
+                      <NavLink
+                        to={item.href}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors',
+                            isActive
+                              ? 'bg-yellow-50 text-yellow-700'
+                              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                          )
+                        }
+                      >
+                        <item.icon className="h-5 w-5" />
+                        {item.name}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </nav>
 
           {/* User section */}
@@ -123,6 +163,7 @@ export function DashboardLayout() {
         <main className="p-4 sm:p-6">
           <Outlet />
         </main>
+        <ChatWidget />
       </div>
     </div>
   );

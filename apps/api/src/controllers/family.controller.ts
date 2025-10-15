@@ -7,6 +7,7 @@ import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
 import { clerkClient } from '@clerk/express';
+import { authController } from './auth.controller';
 
 // Validation schemas
 const createFamilySchema = z.object({
@@ -15,6 +16,7 @@ const createFamilySchema = z.object({
   patientLastName: z.string().min(1).max(50),
   patientDateOfBirth: z.string().datetime(),
   patientGender: z.enum(['male', 'female', 'other']),
+  patientEmail: z.string().email().optional(),
   relationship: z.string().min(1).max(50),
   userFirstName: z.string().min(1).max(50).optional(),
   userLastName: z.string().min(1).max(50).optional(),
@@ -26,6 +28,10 @@ const inviteMemberSchema = z.object({
   relationship: z.string().min(1).max(50),
 });
 
+const invitePatientSchema = z.object({
+  email: z.string().email(),
+});
+
 export class FamilyController {
   // Create a new family with initial patient info
   async createFamily(req: AuthRequest, res: Response) {
@@ -34,7 +40,7 @@ export class FamilyController {
       throw new ApiError(ErrorCodes.VALIDATION_ERROR, 'Invalid input', 400, validation.error.errors);
     }
 
-    const { familyName, patientFirstName, patientLastName, patientDateOfBirth, patientGender, relationship, userFirstName, userLastName } = validation.data;
+    const { familyName, patientFirstName, patientLastName, patientDateOfBirth, patientGender, patientEmail, relationship, userFirstName, userLastName } = validation.data;
     const userId = req.auth!.userId;
 
     // Get user data from Clerk first
@@ -120,6 +126,26 @@ export class FamilyController {
       return { family, patient, user, familyMember };
     });
 
+    // Create patient user account if email provided
+    let patientUserInfo = null;
+    if (patientEmail) {
+      try {
+        const patientUserResult = await authController.createPatientUser(
+          result.patient.id,
+          patientEmail,
+          patientFirstName,
+          patientLastName
+        );
+        patientUserInfo = {
+          email: patientEmail,
+          tempPassword: patientUserResult.tempPassword,
+        };
+      } catch (error) {
+        console.error('Error creating patient user account:', error);
+        // Don't fail the whole operation if patient account creation fails
+      }
+    }
+
     res.status(201).json({
       family: {
         id: result.family.id,
@@ -131,6 +157,7 @@ export class FamilyController {
         },
         role: result.familyMember.role,
       },
+      patientUser: patientUserInfo,
     });
   }
 
@@ -262,13 +289,15 @@ export class FamilyController {
           memberCount: fm.family.members.length,
         }));
 
-        return res.json({ 
+        return res.json({
           families,
           user: {
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
+            userType: user.userType,
+            linkedPatientId: user.linkedPatientId,
           },
         });
       }
@@ -288,13 +317,15 @@ export class FamilyController {
 
         if (pendingInvitation) {
           // User has a pending invitation, return it so frontend can redirect
-          return res.json({ 
+          return res.json({
             families: [],
             user: user ? {
               id: user.id,
               firstName: user.firstName,
               lastName: user.lastName,
               email: user.email,
+              userType: user.userType,
+              linkedPatientId: user.linkedPatientId,
             } : null,
             pendingInvitation: {
               token: pendingInvitation.token,
@@ -305,13 +336,15 @@ export class FamilyController {
       }
 
       // No user, no families, no invitations
-      return res.json({ 
+      return res.json({
         families: [],
         user: user ? {
           id: user.id,
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
+          userType: user.userType,
+          linkedPatientId: user.linkedPatientId,
         } : null,
       });
     } catch (error) {
@@ -417,6 +450,115 @@ export class FamilyController {
         email: invitation.email,
         role: invitation.role,
         status: invitation.status,
+      },
+    });
+  }
+
+  // Invite patient to portal
+  async invitePatient(req: AuthRequest, res: Response) {
+    const validation = invitePatientSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ApiError(ErrorCodes.VALIDATION_ERROR, 'Invalid input', 400, validation.error.errors);
+    }
+
+    const { familyId } = req.params;
+    const { email } = validation.data;
+    const userId = req.auth!.userId;
+
+    // Verify user has permission to invite (must be primary_caregiver or caregiver)
+    const member = await prisma.familyMember.findFirst({
+      where: {
+        familyId,
+        user: { clerkId: userId },
+        isActive: true,
+        role: { in: [FamilyRole.primary_caregiver, FamilyRole.caregiver] },
+      },
+      include: {
+        family: {
+          include: { patient: true },
+        },
+        user: true,
+      },
+    });
+
+    if (!member) {
+      throw new ApiError(ErrorCodes.FORBIDDEN, 'You do not have permission to invite the patient', 403);
+    }
+
+    // Check if patient already has a user account
+    const patientWithUser = await prisma.patient.findUnique({
+      where: { id: member.family.patient!.id },
+      include: { user: true },
+    });
+
+    if (patientWithUser?.user) {
+      throw new ApiError(ErrorCodes.CONFLICT, 'Patient already has portal access', 409);
+    }
+
+    // Check for pending patient invitation
+    const existingInvite = await prisma.invitation.findFirst({
+      where: {
+        familyId,
+        patientId: member.family.patient!.id,
+        status: InvitationStatus.pending,
+      },
+    });
+
+    if (existingInvite) {
+      throw new ApiError(ErrorCodes.CONFLICT, 'A patient invitation is already pending', 409);
+    }
+
+    // Create patient invitation
+    const token = generateInviteToken();
+    const invitation = await prisma.invitation.create({
+      data: {
+        familyId,
+        email,
+        role: FamilyRole.read_only, // Patients get read_only access to family
+        relationship: 'patient',
+        invitationType: 'PATIENT' as any,
+        patientId: member.family.patient!.id,
+        invitedById: member.userId,
+        token,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days for patient invites
+      },
+      include: {
+        invitedBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    // Send invitation email
+    const patient = member.family.patient!;
+    await sendEmail({
+      to: email,
+      subject: `Access Your CareCompanion Patient Portal`,
+      html: `
+        <h2>Your Patient Portal is Ready</h2>
+        <p>${member.user.firstName} ${member.user.lastName} has set up portal access for you on CareCompanion.</p>
+        <p>You'll be able to:</p>
+        <ul>
+          <li>View your daily checklist</li>
+          <li>Log completed tasks</li>
+          <li>Add notes about your day</li>
+          <li>Track your medications</li>
+        </ul>
+        <a href="${process.env.FRONTEND_URL}/invitation/${token}" style="display: inline-block; padding: 12px 24px; background: #6B7FD7; color: white; text-decoration: none; border-radius: 8px;">Set Up Portal Access</a>
+        <p>This link will be valid for 30 days.</p>
+      `,
+    });
+
+    res.status(201).json({
+      invitation: {
+        id: invitation.id,
+        email: invitation.email,
+        type: 'patient',
+        status: invitation.status,
+        expiresAt: invitation.expiresAt,
       },
     });
   }
@@ -548,6 +690,7 @@ export class FamilyController {
         family: {
           include: { patient: true },
         },
+        patient: true,
       },
     });
 
@@ -566,50 +709,76 @@ export class FamilyController {
     // Get user data from Clerk
     const clerkUser = await clerkClient.users.getUser(userId);
     const userEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId)?.emailAddress;
-    
+
     if (!userEmail) {
       throw new ApiError(ErrorCodes.INVALID_REQUEST, 'User email not found', 400);
     }
+
+    // CRITICAL: Validate that the logged-in user's email matches the invitation
+    if (userEmail.toLowerCase() !== invitation.email.toLowerCase()) {
+      throw new ApiError(
+        ErrorCodes.FORBIDDEN,
+        `This invitation is for ${invitation.email}. Please sign in with that email address to accept this invitation.`,
+        403
+      );
+    }
+
+    // Check if this is a patient invitation
+    const isPatientInvitation = invitation.invitationType === 'PATIENT';
 
     // Create or update user and add to family
     const result = await prisma.$transaction(async (tx) => {
       // Update invitation status
       await tx.invitation.update({
         where: { id: invitation.id },
-        data: { 
+        data: {
           status: InvitationStatus.accepted,
           acceptedAt: new Date(),
         },
       });
 
-      // Create or update user
-      const user = await tx.user.upsert({
+      // Check if user already exists
+      const existingUser = await tx.user.findUnique({
         where: { clerkId: userId },
-        update: {
-          email: userEmail,
-          firstName: clerkUser.firstName || '',
-          lastName: clerkUser.lastName || '',
-        },
-        create: {
-          clerkId: userId,
-          email: userEmail,
-          firstName: clerkUser.firstName || '',
-          lastName: clerkUser.lastName || '',
-        },
       });
 
+      let user;
+      if (existingUser) {
+        // User already exists - only update email if needed, NEVER change userType or linkedPatientId
+        user = await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            email: userEmail, // Keep email in sync with Clerk
+          },
+        });
+      } else {
+        // Create new user with invitation details
+        user = await tx.user.create({
+          data: {
+            clerkId: userId,
+            email: userEmail,
+            firstName: clerkUser.firstName || invitation.patient?.firstName || '',
+            lastName: clerkUser.lastName || invitation.patient?.lastName || '',
+            userType: isPatientInvitation ? 'PATIENT' : 'CAREGIVER',
+            linkedPatientId: isPatientInvitation ? invitation.patientId : undefined,
+          },
+        });
+      }
+
       // Add user to family
+      // IMPORTANT: ALL users (including patients) now get FamilyMember records
+      // This provides consistent data model and easier navigation
       const familyMember = await tx.familyMember.create({
         data: {
           userId: user.id,
           familyId: invitation.familyId,
-          role: invitation.role,
-          relationship: invitation.relationship,
+          role: invitation.role, // Patients will have read_only role
+          relationship: invitation.relationship, // 'patient' for patient invitations
           isActive: true,
         },
       });
 
-      return { user, familyMember };
+      return { user, familyMember, isPatient: isPatientInvitation };
     });
 
     res.json({
@@ -620,8 +789,44 @@ export class FamilyController {
           firstName: invitation.family.patient!.firstName,
           lastName: invitation.family.patient!.lastName,
         },
-        role: result.familyMember.role,
+        role: result.familyMember?.role,
       },
+      userType: result.isPatient ? 'PATIENT' : 'CAREGIVER',
+      redirectTo: result.isPatient ? '/patient' : '/dashboard',
+    });
+  }
+
+  // DEV ONLY: Get all pending invitations (for testing)
+  async getAllInvitations(req: AuthRequest, res: Response) {
+    const invitations = await prisma.invitation.findMany({
+      where: {
+        status: InvitationStatus.pending,
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        family: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({
+      invitations: invitations.map((inv) => ({
+        id: inv.id,
+        email: inv.email,
+        token: inv.token,
+        role: inv.role,
+        relationship: inv.relationship,
+        invitationType: inv.invitationType,
+        status: inv.status,
+        expiresAt: inv.expiresAt,
+        family: {
+          name: inv.family.name,
+        },
+      })),
     });
   }
 
