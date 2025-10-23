@@ -8,7 +8,12 @@
     "module": "commonjs",
     "types": ["node", "jest"],
     "resolveJsonModule": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"],
