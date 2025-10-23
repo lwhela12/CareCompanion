@@ -52,7 +52,7 @@ export function sanitizeJournalContent(content: string): {
   };
 }
 
-function generatePrivacyPreservingSummary(content: string, categories: string[]): string {
+function generatePrivacyPreservingSummary(_content: string, categories: string[]): string {
   const summaries: Record<string, string> = {
     hygiene: 'Patient experienced challenges with daily activities',
     family_dynamics: 'Family interaction noted',

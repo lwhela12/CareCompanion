@@ -19,12 +19,6 @@ export interface ApiError {
 }
 
 // Pagination
-export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  cursor?: string;
-}
-
 export interface PaginatedResponse<T> {
   items: T[];
   nextCursor?: string;
