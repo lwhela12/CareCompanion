@@ -161,6 +161,16 @@ npm run dev
 - Turborepo for monorepo management
 - AWS S3 for file storage (production)
 
+## Deployment
+
+Ready to deploy? See the **[Deployment Guide](DEPLOYMENT.md)** for step-by-step instructions on deploying to:
+- **Frontend**: Vercel
+- **Backend**: Railway
+- **Database**: Railway PostgreSQL
+- **Redis**: Railway Redis
+
+Quick checklist: [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
+
 ## Next Steps
 
 The foundation is now set up. The next priorities are:
@@ -172,7 +182,7 @@ The foundation is now set up. The next priorities are:
    - Journal entries with voice input
    - Family member invitations
 3. **Add AI Integration** for summaries and insights
-4. **Deploy to Production** (AWS/Vercel recommended)
+4. **Deploy to Production** - See [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## Troubleshooting
 

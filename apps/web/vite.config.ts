@@ -11,11 +11,17 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Proxy only used in development mode
+    // In production, VITE_API_URL environment variable is used
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_API_URL || 'http://localhost:3000',
         changeOrigin: true,
       },
     },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
   },
 });
