@@ -144,12 +144,50 @@ export function ChatWidget() {
           } catch {}
         }
       }
+      // Final sanitize to remove any stutters while preserving anchors
+      setMessages((prev) => {
+        if (prev.length === 0) return prev;
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last && last.role === 'assistant' && last.content) {
+          last.content = sanitizeAnswer(last.content);
+        }
+        return copy;
+      });
     } catch (e: any) {
       setMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, I ran into an issue.' }]);
     } finally {
       setIsStreaming(false);
     }
   };
+
+  // Sanitize answer: collapse stutters but preserve anchors like [fact:ID], [journal:ID], [document:ID]
+  function sanitizeAnswer(text: string): string {
+    // Extract anchors
+    const anchorRegex = /\[(fact|journal|doc|document):[^\]]+\]/g;
+    const anchors: string[] = [];
+    const placeholder = (i: number) => `<<ANCHOR_${i}>>`;
+    const stripped = text.replace(anchorRegex, (m) => {
+      anchors.push(m);
+      return placeholder(anchors.length - 1);
+    });
+
+    // Collapse immediate duplicate words (case-sensitive minimal)
+    let cleaned = stripped.replace(/\b(\w+)(\s+\1\b)+/g, '$1');
+
+    // Collapse immediate duplicate bigrams (two-word sequences)
+    cleaned = cleaned.replace(/\b(\w+\s+\w+)(\s+\1\b)+/g, '$1');
+
+    // Normalize multiple spaces/newlines
+    cleaned = cleaned.replace(/[ \t]{2,}/g, ' ');
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+    // Restore anchors
+    const restored = cleaned.replace(/<<ANCHOR_(\d+)>>/g, (_m, idx) => anchors[Number(idx)] || _m);
+
+    // Optional: fix any duplicated label before anchors like 'journal [journal:ID]'
+    return restored.replace(/(journal|fact|document)\s+\[(journal|fact|document):/gi, '[$2:');
+  }
 
   return (
     <>

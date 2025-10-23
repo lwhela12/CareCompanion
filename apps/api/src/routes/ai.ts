@@ -91,7 +91,9 @@ router.post('/chat', async (req, res) => {
     }
     const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
-    const system = `You are a careful family care assistant. Answer strictly from the provided context sections and include citations using the anchors (e.g., [journal:ID], [fact:ID]). Do not invent facts.`;
+    const system = `You are a careful family care assistant.
+Answer strictly from the provided context sections and include citations using anchors exactly as [journal:ID], [fact:ID], or [document:ID].
+Do not invent facts. Do not repeat words or phrases (no stuttering). Write each sentence once, clearly and concisely.`;
     const userMsg = `Context:\n${contextText}\n\nQuestion: ${query}\n\nInstructions: Answer concisely with citations in-line using the provided anchors. If insufficient context, say so and suggest what to look up.`;
 
     const stream = await openai.chat.completions.create({
