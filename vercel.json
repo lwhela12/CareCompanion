@@ -3,7 +3,7 @@
   "buildCommand": "npx turbo run build --filter=@carecompanion/web...",
   "outputDirectory": "apps/web/dist",
   "framework": "vite",
-  "installCommand": "npm install",
+  "installCommand": "npm install --include=dev",
   "headers": [
     {
       "source": "/assets/(.*)",
