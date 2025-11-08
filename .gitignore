@@ -19,6 +19,7 @@ coverage
 .cache
 .eslintcache
 .prettiercache
+*.tsbuildinfo
 
 # Environment variables
 .env
