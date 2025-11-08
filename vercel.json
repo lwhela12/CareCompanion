@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd $VERCEL_ROOT_PATH && npm run build:web",
+  "buildCommand": "npx turbo run build --filter=@carecompanion/web...",
   "outputDirectory": "apps/web/dist",
   "framework": "vite",
   "installCommand": "npm install",
