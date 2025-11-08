@@ -1,5 +1,4 @@
 import { Request } from 'express';
-import { User } from '@carecompanion/database';
 
 export interface AuthRequest extends Request {
   auth?: {
@@ -12,7 +11,13 @@ export interface AuthRequest extends Request {
       [key: string]: any;
     };
   };
-  user?: User;
+  user?: {
+    id: string;
+    familyId?: string;
+    role?: string;
+    email: string;
+    name: string;
+  };
 }
 
 export interface ApiError {

@@ -41,14 +41,14 @@ export class CareTaskController {
       }
 
       const userId = req.auth!.userId;
-      const { title, description, dueDate, reminderDate, assignedToId, priority, isRecurring, recurrenceType, recurrenceEndDate } = validation.data;
+      const { title, description, dueDate, reminderDate, assignedToId: rawAssignedToId, priority, isRecurring, recurrenceType, recurrenceEndDate } = validation.data;
 
       console.log('Creating care task with data:', {
         title,
         description,
         dueDate,
         reminderDate,
-        assignedToId,
+        assignedToId: rawAssignedToId,
         priority,
         userId
       });
@@ -73,6 +73,7 @@ export class CareTaskController {
     const familyId = user.familyMembers[0].familyId;
 
     // Verify assignedToId is a family member if provided
+    let assignedToId = rawAssignedToId;
     if (assignedToId) {
       // Check if it's a patient assignment
       if (assignedToId.startsWith('patient-')) {

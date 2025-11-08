@@ -70,7 +70,7 @@ export function errorHandler(
 
   // Default error response
   const isDevelopment = process.env.NODE_ENV === 'development';
-  res.status(500).json({
+  return res.status(500).json({
     error: {
       code: ErrorCodes.DATABASE_ERROR,
       message: isDevelopment ? err.message : 'Internal server error',

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@carecompanion/database';
-import { createPatientSchema, paginationSchema } from '@carecompanion/shared';
+import { createPatientSchema, paginationSchema, ErrorCodes } from '@carecompanion/shared';
+import { ApiError } from '../middleware/error';
 import { validate, validateQuery } from '../middleware/validate';
 import { authorize, checkResourceAccess } from '../middleware/auth';
 
@@ -17,23 +18,18 @@ router.get('/', validateQuery(paginationSchema), async (req, res, next) => {
       prisma.patient.findMany({
         where: { familyId: req.user!.familyId },
         include: {
-          primaryCaregiver: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          family: true,
           _count: {
             select: {
               medications: true,
-              journalEntries: true,
-              careTasks: true,
+              checklistItems: true,
+              insights: true,
             },
           },
         },
         skip,
         take: limit,
-        orderBy: { name: 'asc' },
+        orderBy: { firstName: 'asc' },
       }),
       prisma.patient.count({
         where: { familyId: req.user!.familyId },
@@ -67,10 +63,12 @@ router.post(
           familyId: req.user!.familyId,
         },
         include: {
-          primaryCaregiver: {
-            select: {
-              id: true,
-              name: true,
+          family: {
+            include: {
+              members: {
+                where: { role: 'primary_caregiver' },
+                take: 1,
+              },
             },
           },
         },
@@ -92,11 +90,12 @@ router.get(
       const patient = await prisma.patient.findUnique({
         where: { id: req.params.id },
         include: {
-          primaryCaregiver: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+          family: {
+            include: {
+              members: {
+                where: { role: 'primary_caregiver' },
+                take: 1,
+              },
             },
           },
           medications: {
@@ -110,12 +109,9 @@ router.get(
           },
           _count: {
             select: {
-              journalEntries: true,
-              careTasks: true,
-              documents: true,
-              insights: {
-                where: { acknowledgedAt: null },
-              },
+              medications: true,
+              checklistItems: true,
+              insights: true,
             },
           },
         },
@@ -140,12 +136,7 @@ router.put(
         where: { id: req.params.id },
         data: req.body,
         include: {
-          primaryCaregiver: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          family: true,
         },
       });
 
@@ -184,6 +175,16 @@ router.get(
       const today = new Date();
       const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+      // First, get the patient to access familyId
+      const patientData = await prisma.patient.findUnique({
+        where: { id: patientId },
+        select: { familyId: true },
+      });
+
+      if (!patientData) {
+        throw new ApiError(ErrorCodes.NOT_FOUND, 'Patient not found', 404);
+      }
+
       const [
         medicationAdherence,
         recentJournalEntries,
@@ -202,22 +203,16 @@ router.get(
         // Recent journal entries
         prisma.journalEntry.count({
           where: {
-            patientId,
+            familyId: patientData.familyId,
             createdAt: { gte: weekAgo },
           },
         }),
         // Pending care tasks
         prisma.careTask.count({
           where: {
-            patientId,
-            careTaskLogs: {
-              none: {
-                scheduledDate: {
-                  gte: today,
-                  lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
-                },
-              },
-            },
+            familyId: patientData.familyId,
+            status: 'PENDING',
+            dueDate: { lte: new Date() },
           },
         }),
         // Active insights
@@ -231,7 +226,7 @@ router.get(
 
       // Calculate adherence rate
       const totalMeds = medicationAdherence.reduce((sum, item) => sum + item._count, 0);
-      const givenMeds = medicationAdherence.find(item => item.status === 'given')?._count || 0;
+      const givenMeds = medicationAdherence.find(item => item.status === ('GIVEN' as any))?._count || 0;
       const adherenceRate = totalMeds > 0 ? givenMeds / totalMeds : 1;
 
       res.json({

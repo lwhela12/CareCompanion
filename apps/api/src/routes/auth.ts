@@ -27,7 +27,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
     
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { authProviderId: clerkUserId },
+      where: { clerkId: clerkUserId },
     });
 
     if (existingUser) {
@@ -61,23 +61,26 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
     // Create user
     const user = await prisma.user.create({
       data: {
-        authProviderId: clerkUserId,
+        clerkId: clerkUserId,
         email: clerkUser.emailAddresses[0].emailAddress,
-        name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'User',
-        familyId,
-        role: role as any,
+        firstName: clerkUser.firstName || '',
+        lastName: clerkUser.lastName || '',
       },
       include: {
-        family: true,
+        familyMembers: {
+          include: {
+            family: true,
+          },
+        },
       },
     });
 
-    res.json({
+    return res.json({
       user,
       isNewUser: true,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -94,9 +97,13 @@ router.get('/me', async (req, res) => {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { authProviderId: req.auth.userId },
+      where: { clerkId: req.auth.userId },
       include: {
-        family: true,
+        familyMembers: {
+          include: {
+            family: true,
+          },
+        },
       },
     });
 
@@ -109,9 +116,9 @@ router.get('/me', async (req, res) => {
       });
     }
 
-    res.json({ user });
+    return res.json({ user });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       error: {
         code: ErrorCodes.DATABASE_ERROR,
         message: 'Failed to fetch user',

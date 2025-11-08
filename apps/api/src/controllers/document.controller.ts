@@ -237,7 +237,7 @@ export class DocumentController {
     const { fileName, fileType, fileSize } = validation.data;
 
     // Validate file type
-    if (!config.upload.allowedMimeTypes.includes(fileType)) {
+    if (!config.upload.allowedMimeTypes.includes(fileType as any)) {
       throw new ApiError(
         ErrorCodes.VALIDATION_ERROR,
         `File type ${fileType} is not allowed. Allowed types: ${config.upload.allowedMimeTypes.join(', ')}`,

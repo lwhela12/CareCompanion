@@ -15,19 +15,24 @@ router.get('/current', async (req, res, next) => {
     const family = await prisma.family.findUnique({
       where: { id: req.user!.familyId },
       include: {
-        users: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            lastActive: true,
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                lastActive: true,
+              },
+            },
           },
         },
-        patients: {
+        patient: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             dateOfBirth: true,
           },
         },
@@ -89,7 +94,11 @@ router.post(
       const existingUser = await prisma.user.findFirst({
         where: {
           email,
-          familyId: req.user!.familyId,
+          familyMembers: {
+            some: {
+              familyId: req.user!.familyId,
+            },
+          },
         },
       });
 
@@ -120,20 +129,24 @@ router.post(
 // Get family members
 router.get('/current/members', async (req, res, next) => {
   try {
-    const users = await prisma.user.findMany({
-      where: { familyId: req.user!.familyId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        lastActive: true,
+    const familyMembers = await prisma.familyMember.findMany({
+      where: { familyId: req.user!.familyId, isActive: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            createdAt: true,
+            lastActive: true,
+          },
+        },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { joinedAt: 'asc' },
     });
 
-    res.json(users);
+    res.json(familyMembers);
   } catch (error) {
     next(error);
   }
@@ -157,14 +170,15 @@ router.delete(
       }
 
       // Check if user exists in family
-      const user = await prisma.user.findFirst({
+      const familyMember = await prisma.familyMember.findFirst({
         where: {
-          id: userId,
+          userId,
           familyId: req.user!.familyId,
+          isActive: true,
         },
       });
 
-      if (!user) {
+      if (!familyMember) {
         throw new ApiError(
           ErrorCodes.NOT_FOUND,
           'User not found in family',
@@ -172,9 +186,10 @@ router.delete(
         );
       }
 
-      // Delete user
-      await prisma.user.delete({
-        where: { id: userId },
+      // Deactivate family membership
+      await prisma.familyMember.update({
+        where: { id: familyMember.id },
+        data: { isActive: false },
       });
 
       res.json({ message: 'User removed from family' });

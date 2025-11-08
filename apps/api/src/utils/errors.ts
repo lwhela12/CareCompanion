@@ -12,6 +12,10 @@ export enum ErrorCodes {
   INTERNAL_ERROR = 'INTERNAL_ERROR',
   SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
   DATABASE_ERROR = 'DATABASE_ERROR',
+  EXTERNAL_SERVICE_ERROR = 'EXTERNAL_SERVICE_ERROR',
+
+  // Business logic errors
+  ALREADY_EXISTS = 'ALREADY_EXISTS',
 }
 
 export class AppError extends Error {

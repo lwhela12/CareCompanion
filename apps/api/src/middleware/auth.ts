@@ -35,7 +35,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       },
     });
   }
-  next();
+  return next();
 }
 
 // Middleware to load user data from database

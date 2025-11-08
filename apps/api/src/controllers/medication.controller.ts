@@ -99,7 +99,7 @@ export class MedicationController {
       scheduleTimes: includeSchedules ? med.scheduleTime : undefined,
     }));
 
-    res.json({ medications: medicationsWithSchedules });
+    return res.json({ medications: medicationsWithSchedules });
   }
 
   // Create a new medication

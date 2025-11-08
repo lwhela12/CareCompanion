@@ -140,7 +140,7 @@ Output strictly minified JSON (no markdown) with these keys:
           role: 'user',
           content: [
             { type: 'text', text: instruction },
-            { type: 'input_image', image_url: params.imageUrl },
+            { type: 'image_url', image_url: { url: params.imageUrl } },
           ],
         },
       ],
@@ -267,7 +267,7 @@ Handle bullet lists, narrative text, and tables.
 Domain type: ${params.docDomainType}.
 Return minified JSON only with keys: { patient, visit, diagnoses, medications, allergies, procedures, recommendations, warnings }`;
 
-    const response: any = await client.responses.create({
+    const response: any = await (client as any).responses.create({
       model: 'gpt-4o-mini',
       text: { format: 'json_object' },
       input: [
