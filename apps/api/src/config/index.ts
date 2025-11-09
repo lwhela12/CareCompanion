@@ -34,7 +34,10 @@ export const config = {
   
   // Frontend
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-  
+  allowedOrigins: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+    : [],
+
   // Logging
   logLevel: process.env.LOG_LEVEL || 'debug',
   

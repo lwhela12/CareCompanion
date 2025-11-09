@@ -16,7 +16,33 @@ async function startServer() {
   // Basic middleware
   app.use(helmet());
   app.use(cors({
-    origin: config.frontendUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+
+      // List of allowed origins (strings and regex patterns)
+      const allowedOrigins = [
+        config.frontendUrl, // Primary frontend URL
+        'http://localhost:5173', // Local development
+        'http://localhost:3000', // Alternative local port
+        /^https:\/\/care-companion-.*\.vercel\.app$/, // All Vercel preview deployments
+        ...config.allowedOrigins, // Additional origins from env var
+      ];
+
+      // Check if the origin matches any allowed pattern
+      const isAllowed = allowedOrigins.some(allowed => {
+        if (typeof allowed === 'string') return allowed === origin;
+        if (allowed instanceof RegExp) return allowed.test(origin);
+        return false;
+      });
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`CORS blocked request from origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   }));
   app.use(morgan('combined', {
