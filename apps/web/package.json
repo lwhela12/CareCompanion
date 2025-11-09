@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "npx --no-install vite",
+    "build": "npx --no-install vite build",
+    "preview": "npx --no-install vite preview",
     "lint": "eslint src/**/*.{ts,tsx}",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist node_modules .turbo"
