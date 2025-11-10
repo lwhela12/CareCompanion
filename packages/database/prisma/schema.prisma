@@ -8,11 +8,11 @@ datasource db {
 }
 
 model Family {
-  id               String         @id @default(uuid())
+  id               String           @id @default(uuid())
   name             String
-  subscriptionTier String         @default("free") @map("subscription_tier")
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
+  subscriptionTier String           @default("free") @map("subscription_tier")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
   auditLogs        AuditLog[]
   careTasks        CareTask[]
   documents        Document[]
@@ -22,6 +22,8 @@ model Family {
   itemLocations    ItemLocation[]
   journalEntries   JournalEntry[]
   patient          Patient?
+  providers        Provider[]
+  recommendations  Recommendation[]
   // Back-relations for Fact system
   factEntities     FactEntity[]
   facts            Fact[]
@@ -114,56 +116,136 @@ model Patient {
   invitations         Invitation[]
   itemLocations       ItemLocation[]
   medications         Medication[]
+  recommendations     Recommendation[]
   family              Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user                User?                  @relation("PatientUser")
 
   @@map("patients")
 }
 
+model Provider {
+  id              String           @id @default(uuid())
+  familyId        String           @map("family_id")
+  name            String
+  specialty       String?
+  type            ProviderType     @default(PHYSICIAN)
+  phone           String?
+  email           String?
+  fax             String?
+  addressLine1    String?          @map("address_line1")
+  addressLine2    String?          @map("address_line2")
+  city            String?
+  state           String?
+  zipCode         String?          @map("zip_code")
+  facility        String?
+  department      String?
+  isActive        Boolean          @default(true) @map("is_active")
+  isPrimary       Boolean          @default(false) @map("is_primary")
+  notes           String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  family          Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  medications     Medication[]
+  recommendations Recommendation[]
+  journalEntries  JournalEntry[]
+
+  @@index([familyId, isActive])
+  @@map("providers")
+}
+
+model Recommendation {
+  id                    String                 @id @default(uuid())
+  familyId              String                 @map("family_id")
+  patientId             String                 @map("patient_id")
+  providerId            String?                @map("provider_id")
+  documentId            String?                @map("document_id")
+  visitDate             DateTime?              @map("visit_date")
+  type                  RecommendationType
+  title                 String
+  description           String
+  priority              RecommendationPriority @default(MEDIUM)
+  frequency             String?
+  duration              String?
+  startDate             DateTime?              @map("start_date")
+  endDate               DateTime?              @map("end_date")
+  status                RecommendationStatus   @default(PENDING)
+  implementedAt         DateTime?              @map("implemented_at")
+  linkedMedicationId    String?                @map("linked_medication_id")
+  linkedCareTaskId      String?                @map("linked_care_task_id")
+  linkedChecklistItemId String?                @map("linked_checklist_item_id")
+  acknowledgedBy        String?                @map("acknowledged_by")
+  acknowledgedAt        DateTime?              @map("acknowledged_at")
+  dismissedReason       String?                @map("dismissed_reason")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  family                Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  patient               Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  provider              Provider?              @relation(fields: [providerId], references: [id])
+  document              Document?              @relation(fields: [documentId], references: [id])
+  linkedMedication      Medication?            @relation("RecommendationMedication", fields: [linkedMedicationId], references: [id])
+  linkedCareTask        CareTask?              @relation(fields: [linkedCareTaskId], references: [id])
+  linkedChecklistItem   PatientChecklistItem?  @relation(fields: [linkedChecklistItemId], references: [id])
+
+  @@index([familyId, status])
+  @@index([patientId])
+  @@index([documentId])
+  @@map("recommendations")
+}
+
 model JournalEntry {
-  id             String            @id @default(uuid())
-  familyId       String            @map("family_id")
-  userId         String            @map("user_id")
-  createdAt      DateTime          @default(now()) @map("created_at")
-  content        String
-  sentiment      JournalSentiment?
-  isPrivate      Boolean           @default(false) @map("is_private")
-  attachmentUrls String[]          @map("attachment_urls")
-  analysisData   Json?             @map("analysis_data")
-  family         Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  user           User              @relation(fields: [userId], references: [id])
+  id               String            @id @default(uuid())
+  familyId         String            @map("family_id")
+  userId           String            @map("user_id")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  content          String
+  sentiment        JournalSentiment?
+  isPrivate        Boolean           @default(false) @map("is_private")
+  attachmentUrls   String[]          @map("attachment_urls")
+  analysisData     Json?             @map("analysis_data")
+  sourceDocumentId String?           @map("source_document_id")
+  visitDate        DateTime?         @map("visit_date")
+  providerId       String?           @map("provider_id")
+  autoGenerated    Boolean           @default(false) @map("auto_generated")
+  family           Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id])
+  provider         Provider?         @relation(fields: [providerId], references: [id])
 
   @@index([familyId, createdAt(sort: Desc)])
   @@index([userId])
+  @@index([sourceDocumentId])
   @@map("journal_entries")
 }
 
 model Medication {
-  id              String          @id @default(uuid())
-  patientId       String          @map("patient_id")
-  name            String
-  dosage          String
-  frequency       String
-  scheduleTime    String[]        @map("schedule_times")
-  instructions    String?
-  prescribedBy    String?         @map("prescribed_by")
-  startDate       DateTime        @map("start_date") @db.Date
-  endDate         DateTime?       @map("end_date") @db.Date
-  isActive        Boolean         @default(true) @map("is_active")
-  createdById     String          @map("created_by_id")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  currentSupply   Int?            @map("current_supply")
-  dosageAmount    Float?          @map("dosage_amount")
-  dosageUnit      String?         @map("dosage_unit")
-  lastRefillDate  DateTime?       @map("last_refill_date") @db.Date
-  refillThreshold Int?            @default(7) @map("refill_threshold")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
-  logs            MedicationLog[]
-  createdBy       User            @relation("CreatedBy", fields: [createdById], references: [id])
-  patient         Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  id                    String           @id @default(uuid())
+  patientId             String           @map("patient_id")
+  name                  String
+  dosage                String
+  frequency             String
+  scheduleTime          String[]         @map("schedule_times")
+  instructions          String?
+  prescribedBy          String?          @map("prescribed_by")
+  prescribingProviderId String?          @map("prescribing_provider_id")
+  startDate             DateTime         @map("start_date") @db.Date
+  endDate               DateTime?        @map("end_date") @db.Date
+  isActive              Boolean          @default(true) @map("is_active")
+  createdById           String           @map("created_by_id")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  currentSupply         Int?             @map("current_supply")
+  dosageAmount          Float?           @map("dosage_amount")
+  dosageUnit            String?          @map("dosage_unit")
+  lastRefillDate        DateTime?        @map("last_refill_date") @db.Date
+  refillThreshold       Int?             @default(7) @map("refill_threshold")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+  logs                  MedicationLog[]
+  createdBy             User             @relation("CreatedBy", fields: [createdById], references: [id])
+  patient               Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  prescribingProvider   Provider?        @relation(fields: [prescribingProviderId], references: [id])
+  recommendations       Recommendation[] @relation("RecommendationMedication")
 
   @@index([patientId])
   @@index([patientId, isActive])
+  @@index([prescribingProviderId])
   @@map("medications")
 }
 
@@ -186,28 +268,29 @@ model MedicationLog {
 }
 
 model CareTask {
-  id                String           @id @default(uuid())
-  familyId          String           @map("family_id")
-  title             String
-  description       String?
-  dueDate           DateTime?        @map("due_date")
-  reminderDate      DateTime?        @map("reminder_date") // When task starts appearing in daily lists
-  assignedToId      String?          @map("assigned_to_id")
-  createdById       String           @map("created_by_id")
-  priority          CareTaskPriority @default(MEDIUM)
-  status            CareTaskStatus   @default(PENDING)
-  recurrenceRule    String?          @map("recurrence_rule") // Stores recurrence pattern
-  recurrenceEndDate DateTime?        @map("recurrence_end_date")
-  parentTaskId      String?          @map("parent_task_id") // Links instances to their recurrence template
-  isRecurrenceTemplate Boolean       @default(false) @map("is_recurrence_template") // True for the original recurring task
-  createdAt         DateTime         @default(now()) @map("created_at")
-  updatedAt         DateTime         @updatedAt @map("updated_at")
-  logs              CareTaskLog[]
-  assignedTo        User?            @relation("AssignedTo", fields: [assignedToId], references: [id])
-  createdBy         User             @relation("CreatedBy", fields: [createdById], references: [id])
-  family            Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  parentTask        CareTask?        @relation("RecurrenceInstances", fields: [parentTaskId], references: [id])
-  recurrenceInstances CareTask[]    @relation("RecurrenceInstances")
+  id                   String           @id @default(uuid())
+  familyId             String           @map("family_id")
+  title                String
+  description          String?
+  dueDate              DateTime?        @map("due_date")
+  reminderDate         DateTime?        @map("reminder_date") // When task starts appearing in daily lists
+  assignedToId         String?          @map("assigned_to_id")
+  createdById          String           @map("created_by_id")
+  priority             CareTaskPriority @default(MEDIUM)
+  status               CareTaskStatus   @default(PENDING)
+  recurrenceRule       String?          @map("recurrence_rule") // Stores recurrence pattern
+  recurrenceEndDate    DateTime?        @map("recurrence_end_date")
+  parentTaskId         String?          @map("parent_task_id") // Links instances to their recurrence template
+  isRecurrenceTemplate Boolean          @default(false) @map("is_recurrence_template") // True for the original recurring task
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+  logs                 CareTaskLog[]
+  assignedTo           User?            @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy            User             @relation("CreatedBy", fields: [createdById], references: [id])
+  family               Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  parentTask           CareTask?        @relation("RecurrenceInstances", fields: [parentTaskId], references: [id])
+  recurrenceInstances  CareTask[]       @relation("RecurrenceInstances")
+  recommendations      Recommendation[]
 
   @@index([familyId, status])
   @@index([assignedToId])
@@ -230,19 +313,20 @@ model CareTaskLog {
 }
 
 model Document {
-  id            String        @id @default(uuid())
-  familyId      String        @map("family_id")
-  title         String
-  description   String?
-  type          DocumentType
-  url           String
-  uploadedById  String        @map("uploaded_by_id")
-  parsingStatus ParsingStatus @default(PENDING) @map("parsing_status")
-  parsedData    Json?         @map("parsed_data")
-  tags          String[]
-  createdAt     DateTime      @default(now()) @map("created_at")
-  family        Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  uploadedBy    User          @relation(fields: [uploadedById], references: [id])
+  id              String           @id @default(uuid())
+  familyId        String           @map("family_id")
+  title           String
+  description     String?
+  type            DocumentType
+  url             String
+  uploadedById    String           @map("uploaded_by_id")
+  parsingStatus   ParsingStatus    @default(PENDING) @map("parsing_status")
+  parsedData      Json?            @map("parsed_data")
+  tags            String[]
+  createdAt       DateTime         @default(now()) @map("created_at")
+  family          Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  uploadedBy      User             @relation(fields: [uploadedById], references: [id])
+  recommendations Recommendation[]
 
   @@index([familyId])
   @@map("documents")
@@ -291,20 +375,20 @@ model Insight {
 }
 
 model AuditLog {
-  id              String   @id @default(uuid())
-  familyId        String   @map("family_id")
-  userId          String   @map("user_id")
-  impersonatedBy  String?  @map("impersonated_by")
-  action          String
-  resourceType    String   @map("resource_type")
-  resourceId      String?  @map("resource_id")
-  metadata        Json?
-  ipAddress       String?  @map("ip_address")
-  userAgent       String?  @map("user_agent")
-  createdAt       DateTime @default(now()) @map("created_at")
-  family          Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  user            User     @relation(fields: [userId], references: [id])
-  impersonator    User?    @relation("ImpersonatedBy", fields: [impersonatedBy], references: [id])
+  id             String   @id @default(uuid())
+  familyId       String   @map("family_id")
+  userId         String   @map("user_id")
+  impersonatedBy String?  @map("impersonated_by")
+  action         String
+  resourceType   String   @map("resource_type")
+  resourceId     String?  @map("resource_id")
+  metadata       Json?
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at")
+  family         Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id])
+  impersonator   User?    @relation("ImpersonatedBy", fields: [impersonatedBy], references: [id])
 
   @@index([familyId, createdAt(sort: Desc)])
   @@index([userId])
@@ -313,34 +397,35 @@ model AuditLog {
 }
 
 model PatientChecklistItem {
-  id          String                  @id @default(uuid())
-  patientId   String                  @map("patient_id")
-  title       String
-  description String?
-  category    ChecklistCategory
-  scheduledTime String?               @map("scheduled_time")
-  isActive    Boolean                 @default(true) @map("is_active")
-  createdById String                  @map("created_by_id")
-  createdAt   DateTime                @default(now()) @map("created_at")
-  updatedAt   DateTime                @updatedAt @map("updated_at")
-  logs        PatientChecklistLog[]
-  createdBy   User                    @relation(fields: [createdById], references: [id])
-  patient     Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  id              String                @id @default(uuid())
+  patientId       String                @map("patient_id")
+  title           String
+  description     String?
+  category        ChecklistCategory
+  scheduledTime   String?               @map("scheduled_time")
+  isActive        Boolean               @default(true) @map("is_active")
+  createdById     String                @map("created_by_id")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  logs            PatientChecklistLog[]
+  createdBy       User                  @relation(fields: [createdById], references: [id])
+  patient         Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  recommendations Recommendation[]
 
   @@index([patientId, isActive])
   @@map("patient_checklist_items")
 }
 
 model PatientChecklistLog {
-  id           String                @id @default(uuid())
-  itemId       String                @map("item_id")
+  id            String               @id @default(uuid())
+  itemId        String               @map("item_id")
   completedById String?              @map("completed_by_id")
-  completedAt  DateTime              @default(now()) @map("completed_at")
-  notes        String?
-  voiceNoteUrl String?               @map("voice_note_url")
-  createdAt    DateTime              @default(now()) @map("created_at")
-  item         PatientChecklistItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  completedBy  User?                 @relation(fields: [completedById], references: [id])
+  completedAt   DateTime             @default(now()) @map("completed_at")
+  notes         String?
+  voiceNoteUrl  String?              @map("voice_note_url")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  item          PatientChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  completedBy   User?                @relation(fields: [completedById], references: [id])
 
   @@index([itemId, completedAt(sort: Desc)])
   @@map("patient_checklist_logs")
@@ -409,71 +494,71 @@ enum InsightSeverity {
 }
 
 enum ChecklistCategory {
-  MEALS            @map("meals")
-  MEDICATION       @map("medication")
-  EXERCISE         @map("exercise")
-  HYGIENE          @map("hygiene")
-  SOCIAL           @map("social")
-  THERAPY          @map("therapy")
-  OTHER            @map("other")
+  MEALS      @map("meals")
+  MEDICATION @map("medication")
+  EXERCISE   @map("exercise")
+  HYGIENE    @map("hygiene")
+  SOCIAL     @map("social")
+  THERAPY    @map("therapy")
+  OTHER      @map("other")
 }
 
 // --- Fact System (domain-agnostic) ---
 
 enum FactDomain {
-  MEDICAL    @map("medical")
-  FINANCIAL  @map("financial")
-  ESTATE     @map("estate")
-  WELLBEING  @map("wellbeing")
+  MEDICAL   @map("medical")
+  FINANCIAL @map("financial")
+  ESTATE    @map("estate")
+  WELLBEING @map("wellbeing")
 }
 
 enum FactStatus {
-  PROPOSED    @map("proposed")
-  ACTIVE      @map("active")
-  REJECTED    @map("rejected")
-  SUPERSEDED  @map("superseded")
+  PROPOSED   @map("proposed")
+  ACTIVE     @map("active")
+  REJECTED   @map("rejected")
+  SUPERSEDED @map("superseded")
 }
 
 enum FactAssertedBy {
-  AI      @map("ai")
-  USER    @map("user")
-  SYSTEM  @map("system")
+  AI     @map("ai")
+  USER   @map("user")
+  SYSTEM @map("system")
 }
 
 model FactEntity {
-  id         String   @id @default(uuid())
-  familyId   String   @map("family_id")
-  type       String
-  displayName String? @map("display_name")
-  metadata   Json?
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  family     Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  facts      Fact[]
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  type        String
+  displayName String?  @map("display_name")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  family      Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  facts       Fact[]
 
   @@index([familyId, type])
   @@map("fact_entities")
 }
 
 model Fact {
-  id           String         @id @default(uuid())
-  familyId     String         @map("family_id")
-  entityId     String         @map("entity_id")
-  domain       FactDomain
-  entityType   String         @map("entity_type")
-  key          String
-  value        Json           @map("value_json")
-  status       FactStatus     @default(PROPOSED)
-  assertedBy   FactAssertedBy @default(AI) @map("asserted_by")
-  confidence   Float          @default(0.5)
-  pinned       Boolean        @default(false)
-  effectiveStart DateTime?    @map("effective_start")
-  effectiveEnd   DateTime?    @map("effective_end")
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
-  family       Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  entity       FactEntity     @relation(fields: [entityId], references: [id], onDelete: Cascade)
-  sources      FactSource[]
+  id             String         @id @default(uuid())
+  familyId       String         @map("family_id")
+  entityId       String         @map("entity_id")
+  domain         FactDomain
+  entityType     String         @map("entity_type")
+  key            String
+  value          Json           @map("value_json")
+  status         FactStatus     @default(PROPOSED)
+  assertedBy     FactAssertedBy @default(AI) @map("asserted_by")
+  confidence     Float          @default(0.5)
+  pinned         Boolean        @default(false)
+  effectiveStart DateTime?      @map("effective_start")
+  effectiveEnd   DateTime?      @map("effective_end")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  family         Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  entity         FactEntity     @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  sources        FactSource[]
 
   @@index([familyId, domain, status])
   @@index([entityId, key, status])
@@ -487,7 +572,7 @@ model FactSource {
   sourceId   String   @map("source_id")
   section    String?
   spanHash   String?  @map("span_hash")
-  weight     Float? 
+  weight     Float?
   createdAt  DateTime @default(now()) @map("created_at")
   fact       Fact     @relation(fields: [factId], references: [id], onDelete: Cascade)
 
@@ -495,7 +580,6 @@ model FactSource {
   @@index([sourceType, sourceId])
   @@map("fact_sources")
 }
-
 
 enum UserType {
   CAREGIVER @map("caregiver")
@@ -505,4 +589,39 @@ enum UserType {
 enum InvitationType {
   CAREGIVER @map("caregiver")
   PATIENT   @map("patient")
+}
+
+enum ProviderType {
+  PHYSICIAN  @map("physician")
+  SPECIALIST @map("specialist")
+  THERAPIST  @map("therapist")
+  PHARMACIST @map("pharmacist")
+  FACILITY   @map("facility")
+  OTHER      @map("other")
+}
+
+enum RecommendationType {
+  MEDICATION @map("medication")
+  EXERCISE   @map("exercise")
+  DIET       @map("diet")
+  THERAPY    @map("therapy")
+  LIFESTYLE  @map("lifestyle")
+  MONITORING @map("monitoring")
+  FOLLOWUP   @map("followup")
+  TESTS      @map("tests")
+}
+
+enum RecommendationStatus {
+  PENDING      @map("pending")
+  ACKNOWLEDGED @map("acknowledged")
+  IN_PROGRESS  @map("in_progress")
+  COMPLETED    @map("completed")
+  DISMISSED    @map("dismissed")
+}
+
+enum RecommendationPriority {
+  URGENT @map("urgent")
+  HIGH   @map("high")
+  MEDIUM @map("medium")
+  LOW    @map("low")
 }
