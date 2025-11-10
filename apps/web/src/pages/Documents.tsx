@@ -169,7 +169,8 @@ export function Documents() {
     setIsParsing(true);
 
     try {
-      const resp = await fetch(`/api/v1/documents/${doc.id}/parse`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const resp = await fetch(`${apiUrl}/api/v1/documents/${doc.id}/parse`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${await getAuthToken()}`,
