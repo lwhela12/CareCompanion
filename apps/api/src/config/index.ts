@@ -66,6 +66,9 @@ const requiredEnvVars = [
   'DATABASE_URL',
   'CLERK_PUBLISHABLE_KEY',
   'CLERK_SECRET_KEY',
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'S3_BUCKET_NAME',
 ];
 
 for (const envVar of requiredEnvVars) {
