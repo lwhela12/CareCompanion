@@ -9,6 +9,7 @@ import { config } from '../config';
 import { openAiService } from '../services/ai/openai.service';
 import { logger } from '../utils/logger';
 import { extractFactsFromParsedDocument } from '../services/factExtraction.service';
+import { documentProcessingService } from '../services/documentProcessing.service';
 
 // Validation schemas
 const getUploadUrlSchema = z.object({
@@ -183,6 +184,19 @@ export class DocumentController {
         await extractFactsFromParsedDocument(documentId);
       } catch (e) {
         logger.warn('Fact extraction failed', { error: (e as any)?.message || e, documentId });
+      }
+
+      // Auto-populate app entities from parsed data (non-blocking best-effort)
+      try {
+        const processingResult = await documentProcessingService.processAfterParsing({
+          documentId,
+          familyId: userFamilyId,
+          userId: userId,
+          parsedData: parsedResult,
+        });
+        logger.info('Document processing result', { processingResult });
+      } catch (e) {
+        logger.warn('Document processing failed', { error: (e as any)?.message || e, documentId });
       }
 
       sse({ type: 'status', status: 'completed' });

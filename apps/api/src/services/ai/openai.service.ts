@@ -16,11 +16,16 @@ export const ParsedMedicalRecordSchema = z.object({
     .object({
       dateOfService: z.string().optional().nullable(),
       facility: z.string().optional().nullable(),
+      summary: z.string().optional().nullable(), // NEW: 2-3 sentence summary for journal
       provider: z
         .object({
           name: z.string().optional().nullable(),
           specialty: z.string().optional().nullable(),
           phone: z.string().optional().nullable(),
+          email: z.string().optional().nullable(), // NEW
+          fax: z.string().optional().nullable(), // NEW
+          address: z.string().optional().nullable(), // NEW: full address if available
+          department: z.string().optional().nullable(), // NEW
         })
         .optional()
         .default({}),
@@ -74,7 +79,18 @@ export const ParsedMedicalRecordSchema = z.object({
     )
     .optional()
     .default([]),
-  recommendations: z.array(z.string()).optional().default([]),
+  recommendations: z
+    .array(
+      z.object({
+        text: z.string(), // The recommendation itself
+        type: z.string().optional().nullable(), // NEW: medication|exercise|diet|therapy|lifestyle|monitoring|followup|tests
+        priority: z.string().optional().nullable(), // NEW: urgent|high|medium|low
+        frequency: z.string().optional().nullable(), // NEW: "daily", "3x per week", etc.
+        duration: z.string().optional().nullable(), // NEW: "ongoing", "6 weeks", etc.
+      })
+    )
+    .optional()
+    .default([]),
   warnings: z.array(z.string()).optional().default([]),
 });
 
@@ -117,15 +133,25 @@ If a field is not present, set scalars to null and lists to []. Do not invent da
     const instruction = `Read the document image and extract all relevant medical information available.
 The content might be free-form notes, bullet points, or structured fields.
 Domain type: ${params.docDomainType}.
+
+IMPORTANT for recommendations: For each recommendation, classify its type (medication, exercise, diet, therapy, lifestyle, monitoring, followup, tests) and priority (urgent, high, medium, low) if discernible. Extract frequency ("daily", "3x per week") and duration ("ongoing", "6 weeks", "until next visit") if mentioned.
+
 Output strictly minified JSON (no markdown) with these keys:
 {
   patient: { name?, dateOfBirth?, mrn? },
-  visit: { dateOfService?, facility?, provider: { name?, specialty?, phone? }?, followUp?, nextAppointment? },
+  visit: {
+    dateOfService?,
+    facility?,
+    summary?,  // 2-3 sentence summary of this visit for journal entry
+    provider: { name?, specialty?, phone?, email?, fax?, address?, department? }?,
+    followUp?,
+    nextAppointment?
+  },
   diagnoses: Array<{ name: string, icd10? }>,
   medications: Array<{ name: string, dosage?, frequency?, route?, startDate?, endDate?, status?, notes? }>,
   allergies: Array<{ substance: string, reaction?, severity? }>,
   procedures: Array<{ name: string, date?, cpt? }>,
-  recommendations: string[],
+  recommendations: Array<{ text: string, type?, priority?, frequency?, duration? }>,
   warnings: string[]
 }`;
 
@@ -182,15 +208,25 @@ Extract as much clinically relevant information as is truly present. Populate th
     const instruction = `Read the following text and extract all relevant medical information available.
 The content may be bullet points, narrative, or structured lists.
 Domain type: ${params.docDomainType}.
+
+IMPORTANT for recommendations: For each recommendation, classify its type (medication, exercise, diet, therapy, lifestyle, monitoring, followup, tests) and priority (urgent, high, medium, low) if discernible. Extract frequency ("daily", "3x per week") and duration ("ongoing", "6 weeks", "until next visit") if mentioned.
+
 Output strictly minified JSON (no markdown) with these keys:
 {
   patient: { name?, dateOfBirth?, mrn? },
-  visit: { dateOfService?, facility?, provider: { name?, specialty?, phone? }?, followUp?, nextAppointment? },
+  visit: {
+    dateOfService?,
+    facility?,
+    summary?,  // 2-3 sentence summary of this visit for journal entry
+    provider: { name?, specialty?, phone?, email?, fax?, address?, department? }?,
+    followUp?,
+    nextAppointment?
+  },
   diagnoses: Array<{ name: string, icd10? }>,
   medications: Array<{ name: string, dosage?, frequency?, route?, startDate?, endDate?, status?, notes? }>,
   allergies: Array<{ substance: string, reaction?, severity? }>,
   procedures: Array<{ name: string, date?, cpt? }>,
-  recommendations: string[],
+  recommendations: Array<{ text: string, type?, priority?, frequency?, duration? }>,
   warnings: string[]
 }
 
@@ -265,7 +301,20 @@ Extract as much clinically relevant information as is present. Populate the JSON
     const instruction = `Read the attached PDF and extract all relevant medical information available.
 Handle bullet lists, narrative text, and tables.
 Domain type: ${params.docDomainType}.
-Return minified JSON only with keys: { patient, visit, diagnoses, medications, allergies, procedures, recommendations, warnings }`;
+
+IMPORTANT for recommendations: For each recommendation, classify its type (medication, exercise, diet, therapy, lifestyle, monitoring, followup, tests) and priority (urgent, high, medium, low) if discernible. Extract frequency and duration if mentioned.
+
+Return minified JSON with complete schema:
+{
+  patient: { name?, dateOfBirth?, mrn? },
+  visit: { dateOfService?, facility?, summary?, provider: { name?, specialty?, phone?, email?, fax?, address?, department? }?, followUp?, nextAppointment? },
+  diagnoses: Array<{ name: string, icd10? }>,
+  medications: Array<{ name: string, dosage?, frequency?, route?, startDate?, endDate?, status?, notes? }>,
+  allergies: Array<{ substance: string, reaction?, severity? }>,
+  procedures: Array<{ name: string, date?, cpt? }>,
+  recommendations: Array<{ text: string, type?, priority?, frequency?, duration? }>,
+  warnings: string[]
+}`;
 
     const response: any = await (client as any).responses.create({
       model: 'gpt-4o-mini',
