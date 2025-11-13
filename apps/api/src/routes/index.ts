@@ -10,6 +10,8 @@ import authRoutes from './auth';
 import debugRoutes from './debug.routes';
 import factRoutes from './fact.routes';
 import aiRoutes from './ai';
+import recommendationRoutes from './recommendation.routes';
+import providerRoutes from './provider.routes';
 
 export function setupRoutes(app: Express) {
   // Debug routes (temporary)
@@ -41,6 +43,12 @@ export function setupRoutes(app: Express) {
 
   // AI routes
   app.use('/api/v1/ai', aiRoutes);
+
+  // Recommendation routes
+  app.use('/api/v1', recommendationRoutes);
+
+  // Provider routes
+  app.use('/api/v1', providerRoutes);
 
   // 404 handler
   app.use((req, res) => {

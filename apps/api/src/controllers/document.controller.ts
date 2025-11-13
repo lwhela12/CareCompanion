@@ -190,8 +190,8 @@ export class DocumentController {
       try {
         const processingResult = await documentProcessingService.processAfterParsing({
           documentId,
-          familyId: userFamilyId,
-          userId: userId,
+          familyId: doc.familyId,
+          userId: user.id,
           parsedData: parsedResult,
         });
         logger.info('Document processing result', { processingResult });

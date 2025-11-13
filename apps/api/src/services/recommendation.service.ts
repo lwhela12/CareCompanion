@@ -5,16 +5,9 @@ import {
   RecommendationPriority,
 } from '@prisma/client';
 import { logger } from '../utils/logger';
+import { ParsedRecommendation } from './ai/openai.service';
 
 const prisma = new PrismaClient();
-
-interface ParsedRecommendation {
-  text: string;
-  type?: string | null;
-  priority?: string | null;
-  frequency?: string | null;
-  duration?: string | null;
-}
 
 export class RecommendationService {
   /**

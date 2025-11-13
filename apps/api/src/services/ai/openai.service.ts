@@ -95,6 +95,7 @@ export const ParsedMedicalRecordSchema = z.object({
 });
 
 export type ParsedMedicalRecord = z.infer<typeof ParsedMedicalRecordSchema>;
+export type ParsedRecommendation = ParsedMedicalRecord['recommendations'][number];
 
 export type StreamEvent =
   | { type: 'status'; status: string; detail?: any }
