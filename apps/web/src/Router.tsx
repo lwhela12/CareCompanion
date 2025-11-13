@@ -15,6 +15,8 @@ import { RootRedirect } from './components/RootRedirect';
 import Calendar from './pages/Calendar';
 import SignInPage from './pages/SignIn';
 import SignUpPage from './pages/SignUp';
+import { Recommendations } from './pages/Recommendations';
+import { Providers } from './pages/Providers';
 
 interface RouterProps {
   isSignedIn?: boolean;
@@ -45,6 +47,8 @@ export function Router({ isSignedIn }: RouterProps) {
             <Route path="facts" element={<Facts />} />
             <Route path="family" element={<Family />} />
             <Route path="calendar" element={<Calendar />} />
+            <Route path="recommendations" element={<Recommendations />} />
+            <Route path="providers" element={<Providers />} />
           </Route>
         </>
       ) : (

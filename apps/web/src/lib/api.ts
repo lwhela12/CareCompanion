@@ -58,3 +58,48 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Recommendations API
+export const recommendationsApi = {
+  getAll: (params?: { status?: string; type?: string; priority?: string }) =>
+    api.get('/api/v1/recommendations', { params }),
+
+  getById: (id: string) =>
+    api.get(`/api/v1/recommendations/${id}`),
+
+  update: (id: string, data: any) =>
+    api.put(`/api/v1/recommendations/${id}`, data),
+
+  acknowledge: (id: string) =>
+    api.post(`/api/v1/recommendations/${id}/acknowledge`),
+
+  accept: (id: string, data: any) =>
+    api.post(`/api/v1/recommendations/${id}/accept`, data),
+
+  dismiss: (id: string, reason?: string) =>
+    api.post(`/api/v1/recommendations/${id}/dismiss`, { reason }),
+
+  bulkAccept: (recommendationIds: string[], acceptanceData: Record<string, any>) =>
+    api.post('/api/v1/recommendations/bulk-accept', { recommendationIds, acceptanceData }),
+};
+
+// Providers API
+export const providersApi = {
+  getAll: (params?: { type?: string; isActive?: boolean }) =>
+    api.get('/api/v1/providers', { params }),
+
+  getById: (id: string) =>
+    api.get(`/api/v1/providers/${id}`),
+
+  create: (data: any) =>
+    api.post('/api/v1/providers', data),
+
+  update: (id: string, data: any) =>
+    api.put(`/api/v1/providers/${id}`, data),
+
+  setPrimary: (id: string) =>
+    api.patch(`/api/v1/providers/${id}/primary`),
+
+  delete: (id: string) =>
+    api.delete(`/api/v1/providers/${id}`),
+};

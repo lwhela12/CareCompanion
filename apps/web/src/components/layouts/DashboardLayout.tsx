@@ -12,6 +12,8 @@ import {
   X,
   Loader2,
   Code,
+  ClipboardList,
+  Stethoscope,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -20,6 +22,8 @@ import { ChatWidget } from '@/components/ChatWidget';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
+  { name: 'Recommendations', href: '/recommendations', icon: ClipboardList },
+  { name: 'Providers', href: '/providers', icon: Stethoscope },
   { name: 'Medications', href: '/medications', icon: Pill },
   { name: 'Journal', href: '/journal', icon: Book },
   { name: 'Documents', href: '/documents', icon: FileText },
