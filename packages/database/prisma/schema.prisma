@@ -8,25 +8,26 @@ datasource db {
 }
 
 model Family {
-  id               String           @id @default(uuid())
-  name             String
-  subscriptionTier String           @default("free") @map("subscription_tier")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
-  auditLogs        AuditLog[]
-  careTasks        CareTask[]
-  documents        Document[]
-  members          FamilyMember[]
-  insights         Insight[]
-  invitations      Invitation[]
-  itemLocations    ItemLocation[]
-  journalEntries   JournalEntry[]
-  patient          Patient?
-  providers        Provider[]
-  recommendations  Recommendation[]
+  id                  String               @id @default(uuid())
+  name                String
+  subscriptionTier    String               @default("free") @map("subscription_tier")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  auditLogs           AuditLog[]
+  careTasks           CareTask[]
+  documents           Document[]
+  members             FamilyMember[]
+  insights            Insight[]
+  invitations         Invitation[]
+  itemLocations       ItemLocation[]
+  journalEntries      JournalEntry[]
+  patient             Patient?
+  providers           Provider[]
+  recommendations     Recommendation[]
+  calendarConnections CalendarConnection[]
   // Back-relations for Fact system
-  factEntities     FactEntity[]
-  facts            Fact[]
+  factEntities        FactEntity[]
+  facts               Fact[]
 
   @@map("families")
 }
@@ -56,6 +57,9 @@ model User {
   journalEntries         JournalEntry[]
   medicationLogsGiven    MedicationLog[]
   medicationsCreated     Medication[]           @relation("CreatedBy")
+  mealLogsCreated        MealLog[]              @relation("MealLogsCreated")
+  mealTemplatesCreated   MealTemplate[]         @relation("MealTemplatesCreated")
+  calendarConnections    CalendarConnection[]
   linkedPatient          Patient?               @relation("PatientUser", fields: [linkedPatientId], references: [id])
 
   @@index([email])
@@ -117,6 +121,8 @@ model Patient {
   itemLocations       ItemLocation[]
   medications         Medication[]
   recommendations     Recommendation[]
+  mealLogs            MealLog[]
+  mealTemplates       MealTemplate[]
   family              Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user                User?                  @relation("PatientUser")
 
@@ -154,37 +160,38 @@ model Provider {
 }
 
 model Recommendation {
-  id                    String                 @id @default(uuid())
-  familyId              String                 @map("family_id")
-  patientId             String                 @map("patient_id")
-  providerId            String?                @map("provider_id")
-  documentId            String?                @map("document_id")
-  visitDate             DateTime?              @map("visit_date")
+  id                    String                   @id @default(uuid())
+  familyId              String                   @map("family_id")
+  patientId             String                   @map("patient_id")
+  providerId            String?                  @map("provider_id")
+  documentId            String?                  @map("document_id")
+  visitDate             DateTime?                @map("visit_date")
   type                  RecommendationType
   title                 String
   description           String
-  priority              RecommendationPriority @default(MEDIUM)
+  priority              RecommendationPriority   @default(MEDIUM)
   frequency             String?
   duration              String?
-  startDate             DateTime?              @map("start_date")
-  endDate               DateTime?              @map("end_date")
-  status                RecommendationStatus   @default(PENDING)
-  implementedAt         DateTime?              @map("implemented_at")
-  linkedMedicationId    String?                @map("linked_medication_id")
-  linkedCareTaskId      String?                @map("linked_care_task_id")
-  linkedChecklistItemId String?                @map("linked_checklist_item_id")
-  acknowledgedBy        String?                @map("acknowledged_by")
-  acknowledgedAt        DateTime?              @map("acknowledged_at")
-  dismissedReason       String?                @map("dismissed_reason")
-  createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime               @updatedAt @map("updated_at")
-  family                Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  patient               Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  provider              Provider?              @relation(fields: [providerId], references: [id])
-  document              Document?              @relation(fields: [documentId], references: [id])
-  linkedMedication      Medication?            @relation("RecommendationMedication", fields: [linkedMedicationId], references: [id])
-  linkedCareTask        CareTask?              @relation(fields: [linkedCareTaskId], references: [id])
-  linkedChecklistItem   PatientChecklistItem?  @relation(fields: [linkedChecklistItemId], references: [id])
+  startDate             DateTime?                @map("start_date")
+  endDate               DateTime?                @map("end_date")
+  status                RecommendationStatus     @default(PENDING)
+  implementedAt         DateTime?                @map("implemented_at")
+  linkedMedicationId    String?                  @map("linked_medication_id")
+  linkedCareTaskId      String?                  @map("linked_care_task_id")
+  linkedChecklistItemId String?                  @map("linked_checklist_item_id")
+  acknowledgedBy        String?                  @map("acknowledged_by")
+  acknowledgedAt        DateTime?                @map("acknowledged_at")
+  dismissedReason       String?                  @map("dismissed_reason")
+  createdAt             DateTime                 @default(now()) @map("created_at")
+  updatedAt             DateTime                 @updatedAt @map("updated_at")
+  family                Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  patient               Patient                  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  provider              Provider?                @relation(fields: [providerId], references: [id])
+  document              Document?                @relation(fields: [documentId], references: [id])
+  linkedMedication      Medication?              @relation("RecommendationMedication", fields: [linkedMedicationId], references: [id])
+  linkedCareTask        CareTask?                @relation(fields: [linkedCareTaskId], references: [id])
+  linkedChecklistItem   PatientChecklistItem?    @relation(fields: [linkedChecklistItemId], references: [id])
+  nutritionDetails      NutritionRecommendation?
 
   @@index([familyId, status])
   @@index([patientId])
@@ -209,6 +216,7 @@ model JournalEntry {
   family           Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user             User              @relation(fields: [userId], references: [id])
   provider         Provider?         @relation(fields: [providerId], references: [id])
+  mealLog          MealLog?
 
   @@index([familyId, createdAt(sort: Desc)])
   @@index([userId])
@@ -624,4 +632,136 @@ enum RecommendationPriority {
   HIGH   @map("high")
   MEDIUM @map("medium")
   LOW    @map("low")
+}
+
+enum MealType {
+  BREAKFAST @map("breakfast")
+  LUNCH     @map("lunch")
+  DINNER    @map("dinner")
+  SNACK     @map("snack")
+  OTHER     @map("other")
+}
+
+// Nutrition recommendation details (extends DIET recommendations)
+model NutritionRecommendation {
+  id                   String         @id @default(uuid())
+  recommendationId     String         @unique @map("recommendation_id")
+  dailyCalories        Int?           @map("daily_calories")
+  proteinGrams         Float?         @map("protein_grams")
+  carbsGrams           Float?         @map("carbs_grams")
+  fatGrams             Float?         @map("fat_grams")
+  sodiumMg             Float?         @map("sodium_mg")
+  restrictions         String[] // ["low-sodium", "diabetic-friendly", "soft-foods"]
+  goals                String[] // ["weight-gain", "increase-protein", "hydration"]
+  specialInstructions  String?        @map("special_instructions")
+  recommendedMealTimes String[]       @map("recommended_meal_times")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  recommendation       Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@map("nutrition_recommendations")
+}
+
+// Daily meal logs
+model MealLog {
+  id              String        @id @default(uuid())
+  patientId       String        @map("patient_id")
+  userId          String        @map("user_id")
+  mealType        MealType      @map("meal_type")
+  consumedAt      DateTime      @default(now()) @map("consumed_at")
+  notes           String?
+  photoUrls       String[]      @map("photo_urls")
+  voiceNoteUrl    String?       @map("voice_note_url")
+  nutritionData   Json?         @map("nutrition_data")
+  meetsGuidelines Boolean?      @map("meets_guidelines")
+  concerns        String[]      @default([])
+  journalEntryId  String?       @unique @map("journal_entry_id")
+  templateId      String?       @map("template_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  loggedBy        User          @relation("MealLogsCreated", fields: [userId], references: [id])
+  journalEntry    JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  template        MealTemplate? @relation(fields: [templateId], references: [id])
+
+  @@index([patientId, consumedAt(sort: Desc)])
+  @@index([userId])
+  @@map("meal_logs")
+}
+
+// Meal templates for recurring meals
+model MealTemplate {
+  id            String    @id @default(uuid())
+  patientId     String    @map("patient_id")
+  createdById   String    @map("created_by_id")
+  name          String
+  mealType      MealType  @map("meal_type")
+  nutritionData Json      @map("nutrition_data")
+  photoUrl      String?   @map("photo_url")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdBy     User      @relation("MealTemplatesCreated", fields: [createdById], references: [id])
+  logs          MealLog[]
+
+  @@index([patientId, isActive])
+  @@map("meal_templates")
+}
+
+// --- Calendar Integration ---
+
+enum CalendarProvider {
+  GOOGLE @map("google")
+  APPLE  @map("apple")
+}
+
+enum SyncEventType {
+  MEDICATION  @map("medication")
+  CARE_TASK   @map("care_task")
+  APPOINTMENT @map("appointment")
+}
+
+// Stores OAuth connection details for external calendars
+model CalendarConnection {
+  id             String            @id @default(uuid())
+  userId         String?           @map("user_id") // null = family-wide connection
+  familyId       String            @map("family_id")
+  provider       CalendarProvider
+  accessToken    String            @map("access_token") // Will be encrypted in application layer
+  refreshToken   String?           @map("refresh_token") // Will be encrypted in application layer
+  expiresAt      DateTime?         @map("expires_at")
+  calendarId     String            @map("calendar_id") // External calendar ID
+  calendarName   String?           @map("calendar_name")
+  syncEnabled    Boolean           @default(true) @map("sync_enabled")
+  syncEventTypes SyncEventType[]   @map("sync_event_types") // Which event types to sync
+  lastSyncAt     DateTime?         @map("last_sync_at")
+  lastSyncStatus String?           @map("last_sync_status") // success, error, partial
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  user           User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family         Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  syncLogs       CalendarSyncLog[]
+
+  @@index([userId, syncEnabled])
+  @@index([familyId, syncEnabled])
+  @@map("calendar_connections")
+}
+
+// Audit trail for calendar sync operations
+model CalendarSyncLog {
+  id              String             @id @default(uuid())
+  connectionId    String             @map("connection_id")
+  eventType       SyncEventType      @map("event_type")
+  internalEventId String             @map("internal_event_id") // CareTask, Medication, etc ID
+  externalEventId String?            @map("external_event_id") // Google/Apple event ID
+  action          String // created, updated, deleted
+  status          String // success, error
+  errorMessage    String?            @map("error_message")
+  syncedAt        DateTime           @default(now()) @map("synced_at")
+  connection      CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, syncedAt(sort: Desc)])
+  @@index([internalEventId])
+  @@index([externalEventId])
+  @@map("calendar_sync_logs")
 }

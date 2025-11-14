@@ -97,7 +97,7 @@ Do not invent facts. Do not repeat words or phrases (no stuttering). Write each 
     const userMsg = `Context:\n${contextText}\n\nQuestion: ${query}\n\nInstructions: Answer concisely with citations in-line using the provided anchors. If insufficient context, say so and suggest what to look up.`;
 
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       temperature: 0,
       stream: true,
       messages: [

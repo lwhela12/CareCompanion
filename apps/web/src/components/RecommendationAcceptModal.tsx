@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Loader2, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { recommendationsApi } from '@/lib/api';
+import { parseMedicationFromRecommendation } from '@/lib/parseMedicationFromRecommendation';
 
 interface RecommendationAcceptModalProps {
   recommendation: {
@@ -26,12 +27,20 @@ export function RecommendationAcceptModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Medication fields
+  // Parse medication details from recommendation text
+  const parsedMedicationData = useMemo(() => {
+    if (recommendation.type === 'MEDICATION') {
+      return parseMedicationFromRecommendation(recommendation);
+    }
+    return null;
+  }, [recommendation]);
+
+  // Medication fields - pre-populated with parsed data
   const [medicationData, setMedicationData] = useState({
-    dosage: '',
-    frequency: recommendation.frequency || 'twice daily',
-    scheduleTimes: ['08:00', '20:00'],
-    instructions: '',
+    dosage: parsedMedicationData?.dosage || '',
+    frequency: parsedMedicationData?.frequency || recommendation.frequency || 'twice daily',
+    scheduleTimes: parsedMedicationData?.scheduleTimes || ['08:00', '20:00'],
+    instructions: parsedMedicationData?.instructions || '',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     currentSupply: '',
@@ -50,6 +59,36 @@ export function RecommendationAcceptModal({
     reminderDate: '',
     priority: recommendation.priority === 'URGENT' || recommendation.priority === 'HIGH' ? 'HIGH' : 'MEDIUM',
   });
+
+  // Nutrition recommendation fields (for DIET type)
+  const [nutritionData, setNutritionData] = useState({
+    dailyCalories: '',
+    proteinGrams: '',
+    restrictions: [] as string[],
+    goals: [] as string[],
+    specialInstructions: '',
+  });
+
+  const commonRestrictions = ['Low Sodium', 'Low Sugar', 'Diabetic-Friendly', 'Heart-Healthy', 'Soft Foods', 'Pureed', 'Gluten-Free', 'Dairy-Free'];
+  const commonGoals = ['Weight Management', 'Heart Health', 'Blood Sugar Control', 'Hydration', 'Protein Intake', 'Digestive Health'];
+
+  const toggleRestriction = (restriction: string) => {
+    setNutritionData(prev => ({
+      ...prev,
+      restrictions: prev.restrictions.includes(restriction)
+        ? prev.restrictions.filter(r => r !== restriction)
+        : [...prev.restrictions, restriction],
+    }));
+  };
+
+  const toggleGoal = (goal: string) => {
+    setNutritionData(prev => ({
+      ...prev,
+      goals: prev.goals.includes(goal)
+        ? prev.goals.filter(g => g !== goal)
+        : [...prev.goals, goal],
+    }));
+  };
 
   function getCategoryFromType(type: string): string {
     const mapping: Record<string, string> = {
@@ -83,7 +122,17 @@ export function RecommendationAcceptModal({
             refillThreshold: parseInt(medicationData.refillThreshold),
           },
         };
-      } else if (['EXERCISE', 'DIET', 'LIFESTYLE', 'THERAPY'].includes(recommendation.type)) {
+      } else if (recommendation.type === 'DIET') {
+        acceptanceData = {
+          nutritionRecommendationData: {
+            dailyCalories: nutritionData.dailyCalories ? parseInt(nutritionData.dailyCalories) : undefined,
+            proteinGrams: nutritionData.proteinGrams ? parseFloat(nutritionData.proteinGrams) : undefined,
+            restrictions: nutritionData.restrictions,
+            goals: nutritionData.goals,
+            specialInstructions: nutritionData.specialInstructions || undefined,
+          },
+        };
+      } else if (['EXERCISE', 'LIFESTYLE', 'THERAPY'].includes(recommendation.type)) {
         acceptanceData = {
           checklistData: {
             category: checklistData.category,
@@ -305,8 +354,107 @@ export function RecommendationAcceptModal({
                 </div>
               )}
 
+              {/* Nutrition Recommendation Form (DIET type) */}
+              {recommendation.type === 'DIET' && (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Set nutrition goals and guidelines to track meal compliance.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Daily Calories (Optional)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={nutritionData.dailyCalories}
+                        onChange={(e) => setNutritionData({ ...nutritionData, dailyCalories: e.target.value })}
+                        placeholder="e.g., 2000"
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Daily Protein (g, Optional)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={nutritionData.proteinGrams}
+                        onChange={(e) => setNutritionData({ ...nutritionData, proteinGrams: e.target.value })}
+                        placeholder="e.g., 60"
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Dietary Restrictions
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {commonRestrictions.map((restriction) => (
+                        <button
+                          key={restriction}
+                          type="button"
+                          onClick={() => toggleRestriction(restriction)}
+                          className={cn(
+                            'px-3 py-2 rounded-md text-sm font-medium transition-colors border',
+                            nutritionData.restrictions.includes(restriction)
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          )}
+                        >
+                          {restriction}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nutrition Goals
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {commonGoals.map((goal) => (
+                        <button
+                          key={goal}
+                          type="button"
+                          onClick={() => toggleGoal(goal)}
+                          className={cn(
+                            'px-3 py-2 rounded-md text-sm font-medium transition-colors border',
+                            nutritionData.goals.includes(goal)
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          )}
+                        >
+                          {goal}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Special Instructions
+                    </label>
+                    <textarea
+                      value={nutritionData.specialInstructions}
+                      onChange={(e) => setNutritionData({ ...nutritionData, specialInstructions: e.target.value })}
+                      rows={3}
+                      placeholder="e.g., Avoid grapefruit, Take with meals, Texture modifications needed..."
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Checklist Form */}
-              {['EXERCISE', 'DIET', 'LIFESTYLE', 'THERAPY'].includes(recommendation.type) && (
+              {['EXERCISE', 'LIFESTYLE', 'THERAPY'].includes(recommendation.type) && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Category</label>

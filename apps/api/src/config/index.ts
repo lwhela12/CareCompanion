@@ -23,7 +23,16 @@ export const config = {
   
   // OpenAI
   openaiApiKey: process.env.OPENAI_API_KEY!,
-  
+
+  // Google Calendar OAuth
+  google: {
+    clientId: process.env.GOOGLE_CALENDAR_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CALENDAR_CLIENT_SECRET || '',
+    redirectUri: process.env.GOOGLE_CALENDAR_REDIRECT_URI || 'http://localhost:3000/api/v1/calendar/callback/google',
+    stateSecret: process.env.GOOGLE_STATE_SECRET || 'default-state-secret-change-in-production',
+    tokenSecret: process.env.GOOGLE_TOKEN_SECRET || 'default-token-secret-change-in-production',
+  },
+
   // AWS S3
   aws: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,

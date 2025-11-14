@@ -103,3 +103,52 @@ export const providersApi = {
   delete: (id: string) =>
     api.delete(`/api/v1/providers/${id}`),
 };
+
+// Nutrition API
+export const nutritionApi = {
+  // Meal Logs
+  getMealLogs: (patientId: string, params?: { startDate?: string; endDate?: string; mealType?: string; limit?: number; offset?: number }) =>
+    api.get(`/api/v1/patients/${patientId}/meals`, { params }),
+
+  createMealLog: (patientId: string, data: any) =>
+    api.post(`/api/v1/patients/${patientId}/meals`, data),
+
+  getTodaysMeals: (patientId: string) =>
+    api.get(`/api/v1/patients/${patientId}/meals/today`),
+
+  getWeeklySummary: (patientId: string) =>
+    api.get(`/api/v1/patients/${patientId}/meals/weekly-summary`),
+
+  updateMealLog: (mealLogId: string, data: any) =>
+    api.put(`/api/v1/meals/${mealLogId}`, data),
+
+  deleteMealLog: (mealLogId: string) =>
+    api.delete(`/api/v1/meals/${mealLogId}`),
+
+  // Meal Templates
+  getMealTemplates: (patientId: string) =>
+    api.get(`/api/v1/patients/${patientId}/meal-templates`),
+
+  createMealTemplate: (patientId: string, data: any) =>
+    api.post(`/api/v1/patients/${patientId}/meal-templates`, data),
+
+  updateMealTemplate: (templateId: string, data: any) =>
+    api.put(`/api/v1/meal-templates/${templateId}`, data),
+
+  deleteMealTemplate: (templateId: string) =>
+    api.delete(`/api/v1/meal-templates/${templateId}`),
+
+  // Nutrition Recommendations
+  createNutritionRecommendation: (recommendationId: string, data: any) =>
+    api.post(`/api/v1/recommendations/${recommendationId}/nutrition-details`, data),
+
+  getNutritionRecommendation: (recommendationId: string) =>
+    api.get(`/api/v1/recommendations/${recommendationId}/nutrition-details`),
+
+  // File Uploads
+  getPhotoUploadUrl: (fileName: string, fileType: string) =>
+    api.post('/api/v1/nutrition/upload-url/photo', { fileName, fileType }),
+
+  getVoiceNoteUploadUrl: (fileName: string, fileType: string) =>
+    api.post('/api/v1/nutrition/upload-url/voice', { fileName, fileType }),
+};

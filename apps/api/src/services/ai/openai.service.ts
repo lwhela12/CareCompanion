@@ -125,7 +125,7 @@ export class OpenAiService {
   ): Promise<ParsedMedicalRecord> {
     const client = this.getClient();
 
-    onEvent({ type: 'status', status: 'analyzing', detail: { model: 'gpt-4o-mini' } });
+    onEvent({ type: 'status', status: 'analyzing', detail: { model: 'gpt-5-mini' } });
 
     const system = `You are a careful medical information extractor. The input may be a scan, photo, printed report, clinician note, or AI-notetaker summary.
 Extract as much clinically relevant information as is actually present. Populate the JSON schema fully where possible.
@@ -135,7 +135,16 @@ If a field is not present, set scalars to null and lists to []. Do not invent da
 The content might be free-form notes, bullet points, or structured fields.
 Domain type: ${params.docDomainType}.
 
-IMPORTANT for recommendations: For each recommendation, classify its type (medication, exercise, diet, therapy, lifestyle, monitoring, followup, tests) and priority (urgent, high, medium, low) if discernible. Extract frequency ("daily", "3x per week") and duration ("ongoing", "6 weeks", "until next visit") if mentioned.
+IMPORTANT for recommendations: Extract EVERY recommendation as a SEPARATE array entry. Do NOT summarize or combine multiple recommendations into one. If the document contains 5 distinct recommendations, the array MUST have 5 entries.
+
+For each recommendation entry:
+- text: the complete recommendation text
+- type: classify as medication, exercise, diet, therapy, lifestyle, monitoring, followup, or tests
+- priority: classify as urgent, high, medium, or low if discernible
+- frequency: e.g., "daily", "3x per week", "twice daily"
+- duration: e.g., "ongoing", "6 weeks", "until next visit"
+
+Example: If a document says "Start Metformin 500mg daily", "Increase exercise to 30min 3x/week", and "Follow up in 2 weeks", you MUST create 3 separate array entries - do NOT combine them into one recommendation.
 
 Output strictly minified JSON (no markdown) with these keys:
 {
@@ -156,29 +165,37 @@ Output strictly minified JSON (no markdown) with these keys:
   warnings: string[]
 }`;
 
-    const stream = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      stream: true,
-      messages: [
-        { role: 'system', content: system },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: instruction },
-            { type: 'image_url', image_url: { url: params.imageUrl } },
-          ],
-        },
-      ],
-    });
+    // Enable real streaming with event handler
+    const runner = (client as any).responses
+      .stream({
+        model: 'gpt-5-mini',
+        text: { format: { type: 'json_object' } },
+        input: [
+          {
+            role: 'system',
+            content: [{ type: 'input_text', text: system }],
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'input_text', text: instruction },
+              { type: 'input_image', source: { type: 'url', url: params.imageUrl } },
+            ],
+          },
+        ],
+      })
+      .on('response.output_text.delta', (diff: any) => {
+        // Send real-time deltas to client as they arrive
+        if (diff.delta) {
+          onEvent({ type: 'delta', text: diff.delta });
+        }
+      });
 
+    // Collect full response for JSON parsing
     let full = '';
-    for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) {
-        full += delta;
-        onEvent({ type: 'delta', text: delta });
+    for await (const event of runner) {
+      if (event.type === 'response.output_text.delta' && event.delta) {
+        full += event.delta;
       }
     }
 
@@ -201,7 +218,7 @@ Output strictly minified JSON (no markdown) with these keys:
   ): Promise<ParsedMedicalRecord> {
     const client = this.getClient();
 
-    onEvent({ type: 'status', status: 'analyzing', detail: { model: 'gpt-4o-mini' } });
+    onEvent({ type: 'status', status: 'analyzing', detail: { model: 'gpt-5-mini' } });
 
     const system = `You are a careful medical information extractor. The user provides text that may be clinical notes, summaries, transcripts, or AI-notetaker output.
 Extract as much clinically relevant information as is truly present. Populate the JSON schema where possible; otherwise use null/[] accordingly. Do not fabricate.`;
@@ -210,7 +227,16 @@ Extract as much clinically relevant information as is truly present. Populate th
 The content may be bullet points, narrative, or structured lists.
 Domain type: ${params.docDomainType}.
 
-IMPORTANT for recommendations: For each recommendation, classify its type (medication, exercise, diet, therapy, lifestyle, monitoring, followup, tests) and priority (urgent, high, medium, low) if discernible. Extract frequency ("daily", "3x per week") and duration ("ongoing", "6 weeks", "until next visit") if mentioned.
+IMPORTANT for recommendations: Extract EVERY recommendation as a SEPARATE array entry. Do NOT summarize or combine multiple recommendations into one. If the document contains 5 distinct recommendations, the array MUST have 5 entries.
+
+For each recommendation entry:
+- text: the complete recommendation text
+- type: classify as medication, exercise, diet, therapy, lifestyle, monitoring, followup, or tests
+- priority: classify as urgent, high, medium, or low if discernible
+- frequency: e.g., "daily", "3x per week", "twice daily"
+- duration: e.g., "ongoing", "6 weeks", "until next visit"
+
+Example: If a document says "Start Metformin 500mg daily", "Increase exercise to 30min 3x/week", and "Follow up in 2 weeks", you MUST create 3 separate array entries - do NOT combine them into one recommendation.
 
 Output strictly minified JSON (no markdown) with these keys:
 {
@@ -236,23 +262,34 @@ PDF text follows between <doc> tags. If fields are not present, set them to null
 ${this.truncateText(params.text)}
 </doc>`;
 
-    const stream = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      stream: true,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: instruction },
-      ],
-    });
+    // Enable real streaming with event handler
+    const runner = (client as any).responses
+      .stream({
+        model: 'gpt-5-mini',
+        text: { format: { type: 'json_object' } },
+        input: [
+          {
+            role: 'system',
+            content: [{ type: 'input_text', text: system }],
+          },
+          {
+            role: 'user',
+            content: [{ type: 'input_text', text: instruction }],
+          },
+        ],
+      })
+      .on('response.output_text.delta', (diff: any) => {
+        // Send real-time deltas to client as they arrive
+        if (diff.delta) {
+          onEvent({ type: 'delta', text: diff.delta });
+        }
+      });
 
+    // Collect full response for JSON parsing
     let full = '';
-    for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) {
-        full += delta;
-        onEvent({ type: 'delta', text: delta });
+    for await (const event of runner) {
+      if (event.type === 'response.output_text.delta' && event.delta) {
+        full += event.delta;
       }
     }
 
@@ -295,7 +332,7 @@ ${this.truncateText(params.text)}
     const file = await toFile(params.buffer, 'document.pdf', { type: 'application/pdf' });
     const uploaded = await client.files.create({ file, purpose: 'assistants' });
 
-    onEvent({ type: 'status', status: 'analyzing_file', detail: { model: 'gpt-4o-mini' } });
+    onEvent({ type: 'status', status: 'analyzing_file', detail: { model: 'gpt-5-mini' } });
 
     const system = `You are a careful medical information extractor. The attached PDF may be clinical notes, summaries, reports, or AI-notetaker output.
 Extract as much clinically relevant information as is present. Populate the JSON schema fully where possible; otherwise use null/[] accordingly. Do not fabricate.`;
@@ -303,7 +340,16 @@ Extract as much clinically relevant information as is present. Populate the JSON
 Handle bullet lists, narrative text, and tables.
 Domain type: ${params.docDomainType}.
 
-IMPORTANT for recommendations: For each recommendation, classify its type (medication, exercise, diet, therapy, lifestyle, monitoring, followup, tests) and priority (urgent, high, medium, low) if discernible. Extract frequency and duration if mentioned.
+IMPORTANT for recommendations: Extract EVERY recommendation as a SEPARATE array entry. Do NOT summarize or combine multiple recommendations into one. If the document contains 5 distinct recommendations, the array MUST have 5 entries.
+
+For each recommendation entry:
+- text: the complete recommendation text
+- type: classify as medication, exercise, diet, therapy, lifestyle, monitoring, followup, or tests
+- priority: classify as urgent, high, medium, or low if discernible
+- frequency: e.g., "daily", "3x per week", "twice daily"
+- duration: e.g., "ongoing", "6 weeks", "until next visit"
+
+Example: If a document says "Start Metformin 500mg daily", "Increase exercise to 30min 3x/week", and "Follow up in 2 weeks", you MUST create 3 separate array entries - do NOT combine them into one recommendation.
 
 Return minified JSON with complete schema:
 {
@@ -317,53 +363,38 @@ Return minified JSON with complete schema:
   warnings: string[]
 }`;
 
-    const response: any = await (client as any).responses.create({
-      model: 'gpt-4o-mini',
-      text: { format: 'json_object' },
-      input: [
-        {
-          role: 'system',
-          content: [{ type: 'input_text', text: system }],
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'input_text', text: instruction },
-            { type: 'input_file', file_id: uploaded.id },
-          ],
-        },
-      ],
-    });
-
-    // Collect output text from Responses API
-    let full = '';
-    try {
-      if (typeof response.output_text === 'string') {
-        full = response.output_text;
-      } else if (Array.isArray(response.output)) {
-        for (const item of response.output) {
-          if (item?.content) {
-            for (const c of item.content) {
-              if (typeof c?.text === 'string') full += c.text;
-              else if (typeof c === 'string') full += c;
-            }
-          }
+    // Enable real streaming with event handler
+    const runner = (client as any).responses
+      .stream({
+        model: 'gpt-5-mini',
+        text: { format: { type: 'json_object' } },
+        input: [
+          {
+            role: 'system',
+            content: [{ type: 'input_text', text: system }],
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'input_text', text: instruction },
+              { type: 'input_file', file_id: uploaded.id },
+            ],
+          },
+        ],
+      })
+      .on('response.output_text.delta', (diff: any) => {
+        // Send real-time deltas to client as they arrive
+        if (diff.delta) {
+          onEvent({ type: 'delta', text: diff.delta });
         }
-      } else if (typeof response?.content?.[0]?.text?.value === 'string') {
-        full = response.content[0].text.value;
+      });
+
+    // Collect full response for JSON parsing
+    let full = '';
+    for await (const event of runner) {
+      if (event.type === 'response.output_text.delta' && event.delta) {
+        full += event.delta;
       }
-    } catch {
-      // ignore
-    }
-
-    if (!full) {
-      full = JSON.stringify(response);
-    }
-
-    // Simulate streaming by chunking final JSON text into deltas
-    const chunkSize = 512;
-    for (let i = 0; i < full.length; i += chunkSize) {
-      onEvent({ type: 'delta', text: full.slice(i, i + chunkSize) });
     }
 
     const json = this.extractJson(full);

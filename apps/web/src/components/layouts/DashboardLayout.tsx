@@ -14,6 +14,7 @@ import {
   Code,
   ClipboardList,
   Stethoscope,
+  Utensils,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ const navigation = [
   { name: 'Recommendations', href: '/recommendations', icon: ClipboardList },
   { name: 'Providers', href: '/providers', icon: Stethoscope },
   { name: 'Medications', href: '/medications', icon: Pill },
+  { name: 'Nutrition', href: '/nutrition', icon: Utensils },
   { name: 'Journal', href: '/journal', icon: Book },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Facts', href: '/facts', icon: FileText },

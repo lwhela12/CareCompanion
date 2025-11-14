@@ -12,6 +12,8 @@ import factRoutes from './fact.routes';
 import aiRoutes from './ai';
 import recommendationRoutes from './recommendation.routes';
 import providerRoutes from './provider.routes';
+import nutritionRoutes from './nutrition.routes';
+import calendarRoutes from './calendar.routes';
 
 export function setupRoutes(app: Express) {
   // Debug routes (temporary)
@@ -49,6 +51,12 @@ export function setupRoutes(app: Express) {
 
   // Provider routes
   app.use('/api/v1', providerRoutes);
+
+  // Nutrition routes
+  app.use('/api/v1', nutritionRoutes);
+
+  // Calendar integration routes
+  app.use('/api/v1/calendar', calendarRoutes);
 
   // 404 handler
   app.use((req, res) => {

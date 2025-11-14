@@ -5,6 +5,7 @@ import { providerAutoPopulationService } from './providerAutoPopulation.service'
 import { journalAutoPopulationService } from './journalAutoPopulation.service';
 import { recommendationService } from './recommendation.service';
 import { smartMatchingService, MedicationMatch, ActivityMatch } from './smartMatching.service';
+import { medicationReconciliationService, ReconciliationResult } from './medicationReconciliation.service';
 
 const prisma = new PrismaClient();
 
@@ -21,6 +22,8 @@ interface ProcessingResult {
   providerCreated: boolean;
   journalEntryId: string | null;
   recommendationIds: string[];
+  reconciliationRecommendationIds: string[];
+  reconciliationStats: ReconciliationResult['stats'] | null;
   matchedRecommendations: MatchedRecommendation[];
   summary: string;
 }
@@ -43,6 +46,8 @@ export class DocumentProcessingService {
       providerCreated: false,
       journalEntryId: null,
       recommendationIds: [],
+      reconciliationRecommendationIds: [],
+      reconciliationStats: null,
       matchedRecommendations: [],
       summary: '',
     };
@@ -93,6 +98,48 @@ export class DocumentProcessingService {
           providerId: result.providerId,
           providerName: params.parsedData.visit.provider?.name,
         });
+      }
+
+      // Step 2.5: Medication Reconciliation
+      if (params.parsedData.medications && params.parsedData.medications.length > 0) {
+        logger.info(`Starting medication reconciliation with ${params.parsedData.medications.length} medications`);
+
+        const reconciliationResult = await medicationReconciliationService.reconcile({
+          familyId: params.familyId,
+          patientId,
+          documentId: params.documentId,
+          providerId: result.providerId,
+          visitDate: params.parsedData.visit?.dateOfService,
+          documentMedications: params.parsedData.medications,
+        });
+
+        result.reconciliationStats = reconciliationResult.stats;
+
+        // Create recommendations from reconciliation results
+        if (reconciliationResult.recommendations.length > 0) {
+          logger.info(`Creating ${reconciliationResult.recommendations.length} reconciliation recommendations`);
+
+          for (const recRec of reconciliationResult.recommendations) {
+            const createdRec = await prisma.recommendation.create({
+              data: {
+                familyId: params.familyId,
+                patientId,
+                documentId: params.documentId,
+                providerId: result.providerId,
+                visitDate: params.parsedData.visit?.dateOfService
+                  ? new Date(params.parsedData.visit.dateOfService)
+                  : null,
+                type: recRec.type,
+                title: recRec.title,
+                description: recRec.description,
+                priority: recRec.priority,
+                status: 'PENDING',
+                linkedMedicationId: recRec.linkedMedicationId,
+              },
+            });
+            result.reconciliationRecommendationIds.push(createdRec.id);
+          }
+        }
       }
 
       // Step 3: Create Recommendations
@@ -252,6 +299,25 @@ export class DocumentProcessingService {
 
     if (result.journalEntryId) {
       parts.push('Created journal entry from visit');
+    }
+
+    if (result.reconciliationStats) {
+      const stats = result.reconciliationStats;
+      const reconciliationParts: string[] = [];
+
+      if (stats.dosageChanges > 0) {
+        reconciliationParts.push(`${stats.dosageChanges} dosage change${stats.dosageChanges === 1 ? '' : 's'}`);
+      }
+      if (stats.newMedications > 0) {
+        reconciliationParts.push(`${stats.newMedications} new medication${stats.newMedications === 1 ? '' : 's'}`);
+      }
+      if (stats.discontinuedMedications > 0) {
+        reconciliationParts.push(`${stats.discontinuedMedications} potentially discontinued`);
+      }
+
+      if (reconciliationParts.length > 0) {
+        parts.push(`Medication check: ${reconciliationParts.join(', ')}`);
+      }
     }
 
     if (result.recommendationIds.length > 0) {

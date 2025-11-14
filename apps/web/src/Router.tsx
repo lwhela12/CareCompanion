@@ -13,10 +13,12 @@ import { AcceptInvitation } from './pages/AcceptInvitation';
 import { DevInvitations } from './pages/DevInvitations';
 import { RootRedirect } from './components/RootRedirect';
 import Calendar from './pages/Calendar';
+import CalendarSettings from './pages/CalendarSettings';
 import SignInPage from './pages/SignIn';
 import SignUpPage from './pages/SignUp';
 import { Recommendations } from './pages/Recommendations';
 import { Providers } from './pages/Providers';
+import { Nutrition } from './pages/Nutrition';
 
 interface RouterProps {
   isSignedIn?: boolean;
@@ -42,11 +44,13 @@ export function Router({ isSignedIn }: RouterProps) {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="patients" element={<Patients />} />
             <Route path="medications" element={<Medications />} />
+            <Route path="nutrition" element={<Nutrition />} />
             <Route path="journal" element={<Journal />} />
             <Route path="documents" element={<Documents />} />
             <Route path="facts" element={<Facts />} />
             <Route path="family" element={<Family />} />
             <Route path="calendar" element={<Calendar />} />
+            <Route path="settings/calendar" element={<CalendarSettings />} />
             <Route path="recommendations" element={<Recommendations />} />
             <Route path="providers" element={<Providers />} />
           </Route>
