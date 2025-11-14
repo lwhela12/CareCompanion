@@ -134,9 +134,9 @@ export class MealAnalysisService {
       const systemPrompt = this.buildSystemPrompt();
       const userPrompt = this.buildMultiPhotoPrompt(
         params.mealType,
+        params.photoUrls.length,
         params.nutritionGoals,
-        params.patientContext,
-        params.photoUrls.length
+        params.patientContext
       );
 
       // Build content array with all photos
@@ -373,13 +373,13 @@ Return your analysis as JSON matching the schema.`;
    */
   private buildMultiPhotoPrompt(
     mealType: MealType,
+    photoCount: number,
     nutritionGoals?: NutritionRecommendation | null,
     patientContext?: {
       allergies?: string[];
       dietaryRestrictions?: string[];
       texture?: 'regular' | 'soft' | 'pureed';
-    },
-    photoCount: number
+    }
   ): string {
     const basePrompt = this.buildAnalysisPrompt(mealType, nutritionGoals, patientContext);
 

@@ -447,7 +447,7 @@ export class NutritionController {
       );
     }
 
-    const data = validation.data;
+    const data = validation.data as any;
 
     // Verify recommendation exists and user has access
     const recommendation = await prisma.recommendation.findUnique({
