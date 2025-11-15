@@ -286,7 +286,7 @@ export class NutritionController {
     if (data.nutritionData !== undefined) {
       // Merge with existing nutrition data to preserve AI fields like confidence, reasoning
       updateData.nutritionData = {
-        ...existingMealLog.nutritionData,
+        ...(existingMealLog.nutritionData || {}),
         ...data.nutritionData,
       };
     }
