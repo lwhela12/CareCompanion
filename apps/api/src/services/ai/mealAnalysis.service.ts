@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { NutritionRecommendation, MealType } from '@prisma/client';
+import { s3Service } from '../s3.service';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -37,6 +38,45 @@ export type MealAnalysisResult = z.infer<typeof MealAnalysisSchema>;
  */
 export class MealAnalysisService {
   /**
+   * Helper method to convert S3 photo URL to base64 data URI
+   * This allows OpenAI to access images from LocalStack (localhost)
+   */
+  private async photoUrlToBase64(photoUrl: string): Promise<string> {
+    try {
+      // Extract S3 key from URL
+      const key = s3Service.extractKeyFromUrl(photoUrl);
+      if (!key) {
+        throw new Error(`Could not extract S3 key from URL: ${photoUrl}`);
+      }
+
+      // Download the image from S3
+      const imageBuffer = await s3Service.downloadFile(key);
+
+      // Detect content type from buffer (simple magic number detection)
+      let mimeType = 'image/jpeg'; // Default
+      const magic = imageBuffer.toString('hex', 0, 4).toUpperCase();
+      if (magic.startsWith('FFD8FF')) {
+        mimeType = 'image/jpeg';
+      } else if (magic.startsWith('89504E47')) {
+        mimeType = 'image/png';
+      } else if (magic === '47494638') {
+        mimeType = 'image/gif';
+      } else if (magic.startsWith('52494646')) {
+        mimeType = 'image/webp';
+      }
+
+      // Convert to base64
+      const base64Data = imageBuffer.toString('base64');
+
+      // Return as data URI
+      return `data:${mimeType};base64,${base64Data}`;
+    } catch (error) {
+      logger.error('Failed to convert photo URL to base64', { error, photoUrl });
+      throw error;
+    }
+  }
+
+  /**
    * Analyze a meal from a photo using GPT-5.1 Vision
    */
   async analyzeMealFromPhoto(params: {
@@ -62,6 +102,9 @@ export class MealAnalysisService {
         params.patientContext
       );
 
+      // Convert photo URL to base64 for OpenAI (works with LocalStack)
+      const base64Image = await this.photoUrlToBase64(params.photoUrl);
+
       const response = await openai.chat.completions.create({
         model: 'gpt-5.1',
         messages: [
@@ -79,7 +122,7 @@ export class MealAnalysisService {
               {
                 type: 'image_url',
                 image_url: {
-                  url: params.photoUrl,
+                  url: base64Image,
                   detail: 'high', // Use high detail for better food identification
                 },
               },
@@ -139,11 +182,16 @@ export class MealAnalysisService {
         params.patientContext
       );
 
-      // Build content array with all photos
-      const imageContent = params.photoUrls.map((url) => ({
+      // Convert all photos to base64
+      const base64Images = await Promise.all(
+        params.photoUrls.map((url) => this.photoUrlToBase64(url))
+      );
+
+      // Build content array with all photos as base64
+      const imageContent = base64Images.map((base64) => ({
         type: 'image_url' as const,
         image_url: {
-          url,
+          url: base64,
           detail: 'high' as const,
         },
       }));

@@ -27,6 +27,21 @@ const updateMealLogSchema = z.object({
   notes: z.string().max(1000).optional(),
   photoUrls: z.array(z.string().url()).max(5).optional(),
   voiceNoteUrl: z.string().url().optional(),
+  nutritionData: z
+    .object({
+      estimatedCalories: z.number().min(0).max(10000).optional(),
+      proteinGrams: z.number().min(0).max(500).optional(),
+      carbsGrams: z.number().min(0).max(1000).optional(),
+      fatGrams: z.number().min(0).max(500).optional(),
+      sodiumMg: z.number().min(0).max(10000).optional(),
+      fiberGrams: z.number().min(0).max(200).optional(),
+      sugarGrams: z.number().min(0).max(500).optional(),
+      portionSize: z.string().max(100).optional(),
+      foodItems: z.array(z.string()).optional(),
+    })
+    .optional(),
+  meetsGuidelines: z.boolean().nullable().optional(),
+  concerns: z.array(z.string()).optional(),
 });
 
 const createMealTemplateSchema = z.object({
@@ -266,6 +281,21 @@ export class NutritionController {
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.photoUrls) updateData.photoUrls = data.photoUrls;
     if (data.voiceNoteUrl !== undefined) updateData.voiceNoteUrl = data.voiceNoteUrl;
+
+    // Handle nutrition data updates
+    if (data.nutritionData !== undefined) {
+      // Merge with existing nutrition data to preserve AI fields like confidence, reasoning
+      updateData.nutritionData = {
+        ...existingMealLog.nutritionData,
+        ...data.nutritionData,
+      };
+    }
+    if (data.meetsGuidelines !== undefined) {
+      updateData.meetsGuidelines = data.meetsGuidelines;
+    }
+    if (data.concerns !== undefined) {
+      updateData.concerns = data.concerns;
+    }
 
     const mealLog = await nutritionService.updateMealLog(mealLogId, updateData);
 

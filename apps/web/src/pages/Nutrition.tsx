@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { api, nutritionApi } from '@/lib/api';
 import { LogMealModal } from '@/components/LogMealModal';
+import { MealDetailModal } from '@/components/MealDetailModal';
 
 interface MealLog {
   id: string;
@@ -93,6 +94,8 @@ export function Nutrition() {
   const [weeklySummary, setWeeklySummary] = useState<WeeklySummary | null>(null);
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [showLogMealModal, setShowLogMealModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState<MealLog | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [patientId, setPatientId] = useState<string | null>(null);
@@ -147,6 +150,20 @@ export function Nutrition() {
       toast.error(errorMessage);
       throw err;
     }
+  };
+
+  const handleMealClick = (meal: MealLog) => {
+    setSelectedMeal(meal);
+    setShowDetailModal(true);
+  };
+
+  const handleDetailModalClose = () => {
+    setShowDetailModal(false);
+    setSelectedMeal(null);
+  };
+
+  const handleMealUpdate = () => {
+    fetchData(); // Refresh data after update
   };
 
   const handleDeleteMeal = async (mealLogId: string) => {
@@ -279,7 +296,8 @@ export function Nutrition() {
               {todaysMeals.map((meal) => (
                 <div
                   key={meal.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+                  onClick={() => handleMealClick(meal)}
+                  className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors cursor-pointer"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -453,6 +471,14 @@ export function Nutrition() {
           templates={templates}
           onClose={() => setShowLogMealModal(false)}
           onLog={handleLogMeal}
+        />
+      )}
+
+      {showDetailModal && selectedMeal && (
+        <MealDetailModal
+          meal={selectedMeal}
+          onClose={handleDetailModalClose}
+          onUpdate={handleMealUpdate}
         />
       )}
     </div>

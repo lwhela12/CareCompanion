@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { nutritionApi } from '@/lib/api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import heic2any from 'heic2any';
 
 interface LogMealModalProps {
   patientId: string;
@@ -96,17 +97,42 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
           throw new Error(`${file.name} is too large (max 10MB)`);
         }
 
+        // Convert HEIC to JPEG if needed
+        let processedFile = file;
+        if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
+          try {
+            toast.loading('Converting iPhone photo format...', { id: 'heic-convert' });
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: 'image/jpeg',
+              quality: 0.9,
+            });
+            // heic2any returns Blob or Blob[], handle both cases
+            const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+            processedFile = new File(
+              [blob],
+              file.name.replace(/\.heic$/i, '.jpg'),
+              { type: 'image/jpeg' }
+            );
+            toast.success('Photo converted successfully', { id: 'heic-convert' });
+          } catch (conversionError) {
+            console.error('HEIC conversion failed:', conversionError);
+            toast.error('Failed to convert HEIC format. Please use JPG or PNG.', { id: 'heic-convert' });
+            throw new Error('HEIC conversion failed');
+          }
+        }
+
         // Create preview
-        const previewUrl = URL.createObjectURL(file);
+        const previewUrl = URL.createObjectURL(processedFile);
         setPhotoPreviews((prev) => [...prev, previewUrl]);
 
         // Get presigned URL from backend
-        const { data } = await nutritionApi.getPhotoUploadUrl(file.name, file.type);
+        const { data } = await nutritionApi.getPhotoUploadUrl(processedFile.name, processedFile.type);
 
         // Upload to S3
-        await axios.put(data.uploadUrl.url, file, {
+        await axios.put(data.uploadUrl.url, processedFile, {
           headers: {
-            'Content-Type': file.type,
+            'Content-Type': processedFile.type,
           },
         });
 
