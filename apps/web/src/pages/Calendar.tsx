@@ -26,6 +26,9 @@ interface CalendarEvent {
     taskId?: string;
     patientName?: string;
     status?: string;
+    assignedTo?: any;
+    isVirtual?: boolean;
+    parentTaskId?: string;
   };
 }
 
@@ -145,8 +148,8 @@ export default function Calendar() {
             const isAppointment = task.priority === 'HIGH' && (isMedicalAppointment || task.description?.includes('🧠') || task.description?.includes('🔬'));
             
             let color = '#10B981'; // Default green for tasks
-            let type = 'task';
-            
+            let type: 'medication' | 'task' | 'appointment' = 'task';
+
             if (isAppointment) {
               color = '#9333EA'; // Purple for medical appointments
               type = 'appointment';

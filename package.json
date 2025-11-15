@@ -15,6 +15,7 @@
     "build:api": "turbo run build --filter=@carecompanion/api...",
     "build:web": "turbo run build --filter=@carecompanion/web...",
     "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",

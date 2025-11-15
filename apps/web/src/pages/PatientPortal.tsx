@@ -349,7 +349,8 @@ export function PatientPortal() {
             <button
               onClick={async () => {
                 try {
-                  await signOut({ redirectUrl: '/sign-in' });
+                  await signOut();
+                  navigate('/sign-in');
                 } catch (e) {
                   // As a fallback, just navigate to sign-in
                   navigate('/sign-in');

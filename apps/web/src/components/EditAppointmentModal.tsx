@@ -58,7 +58,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
     let location = '';
     let notes = '';
     
-    lines.forEach(line => {
+    lines.forEach((line: string) => {
       if (line.includes('with ')) {
         provider = line.replace(/.*with /, '').trim();
       } else if (line.includes('📍 ')) {

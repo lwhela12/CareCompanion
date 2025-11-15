@@ -17,6 +17,9 @@
     "test": {
       "outputs": []
     },
+    "typecheck": {
+      "outputs": []
+    },
     "db:generate": {
       "cache": false
     },

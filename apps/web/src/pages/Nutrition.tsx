@@ -431,7 +431,7 @@ export function Nutrition() {
                   key={template.id}
                   onClick={() => {
                     // TODO: Quick log with template
-                    toast.info('Quick logging with template coming soon!');
+                    toast('Quick logging with template coming soon!');
                   }}
                   className="text-left border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 transition-all"
                 >

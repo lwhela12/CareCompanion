@@ -338,10 +338,10 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
             <div className="space-y-4">
               <div className="border-2 border-green-200 bg-green-50 rounded-xl p-4">
                 <div className="flex items-start gap-4">
-                  {selectedFile.type.startsWith('image/') ? (
+                  {selectedFile!.type.startsWith('image/') ? (
                     <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden">
                       <img
-                        src={URL.createObjectURL(selectedFile)}
+                        src={URL.createObjectURL(selectedFile!)}
                         alt="Preview"
                         className="w-full h-full object-cover"
                       />
@@ -352,8 +352,8 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{selectedFile.name}</p>
-                    <p className="text-sm text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                    <p className="font-semibold text-gray-900 truncate">{selectedFile!.name}</p>
+                    <p className="text-sm text-gray-500">{formatFileSize(selectedFile!.size)}</p>
                   </div>
                   {!isUploading && (
                     <button
