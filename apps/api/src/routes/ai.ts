@@ -264,7 +264,7 @@ Guidelines:
     messages.push({ role: 'user', content: query });
 
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-mini',
       temperature: 0.3,
       max_tokens: 1500,
       stream: true,
