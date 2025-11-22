@@ -56,9 +56,10 @@ router.get('/:id', async (req, res, next) => {
     );
 
     if (!conversation) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: 'NOT_FOUND', message: 'Conversation not found' },
       });
+      return;
     }
 
     res.json({ conversation });
@@ -77,9 +78,10 @@ router.get('/:id/messages', async (req, res, next) => {
     );
 
     if (!conversation) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: 'NOT_FOUND', message: 'Conversation not found' },
       });
+      return;
     }
 
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
@@ -112,9 +114,10 @@ router.patch('/:id', validate(updateTitleSchema), async (req, res, next) => {
     );
 
     if (!conversation) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: 'NOT_FOUND', message: 'Conversation not found' },
       });
+      return;
     }
 
     res.json({ conversation });
@@ -132,9 +135,10 @@ router.delete('/:id', async (req, res, next) => {
     );
 
     if (!result) {
-      return res.status(404).json({
+      res.status(404).json({
         error: { code: 'NOT_FOUND', message: 'Conversation not found' },
       });
+      return;
     }
 
     res.json({ message: 'Conversation deleted' });

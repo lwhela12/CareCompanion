@@ -1,6 +1,5 @@
 import 'express-async-errors';
 import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -27,13 +26,8 @@ async function startServer() {
     Sentry.init({
       dsn: sentryDsn,
       environment: sentryEnvironment,
-      integrations: [
-        nodeProfilingIntegration(),
-      ],
       // Performance Monitoring
       tracesSampleRate: sentryEnvironment === 'production' ? 0.1 : 1.0,
-      // Profiling
-      profilesSampleRate: sentryEnvironment === 'production' ? 0.1 : 1.0,
       // Release tracking
       release: process.env.APP_VERSION,
       // Don't send errors in development unless explicitly enabled
@@ -42,10 +36,7 @@ async function startServer() {
     logger.info('Sentry initialized for environment:', { environment: sentryEnvironment });
   }
 
-  // Sentry request handler must be the first middleware
-  app.use(Sentry.Handlers.requestHandler());
-  // Sentry tracing middleware for performance monitoring
-  app.use(Sentry.Handlers.tracingHandler());
+  // Sentry instrumentation is automatic in SDK v8+
 
   // Basic middleware
   app.use(compression()); // Enable gzip compression for responses
@@ -120,9 +111,6 @@ async function startServer() {
 
   // Setup routes
   setupRoutes(app);
-
-  // Sentry error handler must be before other error handlers
-  app.use(Sentry.Handlers.errorHandler());
 
   // Error handling
   app.use(errorHandler);
