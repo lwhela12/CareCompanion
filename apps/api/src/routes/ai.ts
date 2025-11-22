@@ -265,7 +265,7 @@ Guidelines:
 
     const stream = await openai.chat.completions.create({
       model: 'gpt-5-mini',
-      max_tokens: 1500,
+      max_completion_tokens: 32000,
       stream: true,
       messages,
     });
