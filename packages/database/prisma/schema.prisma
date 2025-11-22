@@ -766,3 +766,39 @@ model CalendarSyncLog {
   @@index([externalEventId])
   @@map("calendar_sync_logs")
 }
+
+// --- AI Chat Conversations ---
+
+model Conversation {
+  id        String        @id @default(uuid())
+  familyId  String        @map("family_id")
+  userId    String        @map("user_id")
+  title     String?       // Auto-generated from first message or user-set
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  messages  ChatMessage[]
+
+  @@index([familyId, updatedAt(sort: Desc)])
+  @@index([userId])
+  @@map("conversations")
+}
+
+model ChatMessage {
+  id             String       @id @default(uuid())
+  conversationId String       @map("conversation_id")
+  role           MessageRole
+  content        String
+  citations      Json?        // Stores citation references used in this message
+  tokenCount     Int?         @map("token_count")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("chat_messages")
+}
+
+enum MessageRole {
+  USER      @map("user")
+  ASSISTANT @map("assistant")
+  SYSTEM    @map("system")
+}

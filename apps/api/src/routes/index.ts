@@ -16,6 +16,7 @@ import nutritionRoutes from './nutrition.routes';
 import calendarRoutes from './calendar.routes';
 import jobsRoutes from './jobs.routes';
 import userSettingsRoutes from './userSettings.routes';
+import conversationRoutes from './conversation.routes';
 import { getCsrfToken } from '../middleware/csrf';
 
 export function setupRoutes(app: Express) {
@@ -69,6 +70,9 @@ export function setupRoutes(app: Express) {
 
   // User settings routes
   app.use('/api/v1/users', userSettingsRoutes);
+
+  // Conversation routes
+  app.use('/api/v1/conversations', conversationRoutes);
 
   // 404 handler
   app.use((req, res) => {
