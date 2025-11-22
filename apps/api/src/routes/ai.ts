@@ -3,11 +3,12 @@ import OpenAI from 'openai';
 import { prisma } from '@carecompanion/database';
 import { config } from '../config';
 import { buildFactsHeader } from '../services/factsHeader.service';
+import { aiRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
 // Simple chat endpoint (SSE) using small context: Facts Header + recent journals + recent recommendations
-router.post('/chat', async (req, res) => {
+router.post('/chat', aiRateLimiter, async (req, res) => {
   // SSE headers
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',

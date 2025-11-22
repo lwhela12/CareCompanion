@@ -5,6 +5,7 @@ import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
 import { startOfDay, endOfDay, addDays, format } from 'date-fns';
+import { auditService, AuditActions, ResourceTypes } from '../services/audit.service';
 
 // Validation schemas
 const createMedicationSchema = z.object({
@@ -153,6 +154,18 @@ export class MedicationController {
         refillThreshold: data.refillThreshold,
         createdById: user.id,
       },
+    });
+
+    // Audit log
+    const familyId = user.familyMembers[0].familyId;
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.CREATE_MEDICATION,
+      resourceType: ResourceTypes.MEDICATION,
+      resourceId: medication.id,
+      metadata: { name: data.name, dosage: data.dosage, patientId: data.patientId },
+      familyId,
+      userId: user.id,
     });
 
     res.status(201).json({ medication });
@@ -457,6 +470,22 @@ export class MedicationController {
       return { log, journalEntry };
     });
 
+    // Audit log for medication logging
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.LOG_MEDICATION,
+      resourceType: ResourceTypes.MEDICATION_LOG,
+      resourceId: result.log.id,
+      metadata: {
+        medicationId,
+        medicationName: medication.name,
+        status,
+        scheduledTime,
+      },
+      familyId: medication.patient.familyId,
+      userId: user.id,
+    });
+
     res.json({ log: result.log, journalEntry: result.journalEntry });
   }
 
@@ -512,6 +541,18 @@ export class MedicationController {
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         endDate: data.endDate ? new Date(data.endDate) : undefined,
       },
+    });
+
+    // Audit log
+    const familyId = user!.familyMembers[0].familyId;
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.UPDATE_MEDICATION,
+      resourceType: ResourceTypes.MEDICATION,
+      resourceId: medicationId,
+      metadata: { updates: validation.data, medicationName: medication.name },
+      familyId,
+      userId: user!.id,
     });
 
     res.json({ medication });
@@ -607,6 +648,25 @@ export class MedicationController {
 
     if (!hasAccess) {
       throw new ApiError(ErrorCodes.FORBIDDEN, 'Access denied', 403);
+    }
+
+    // Get medication details before deactivating
+    const medication = await prisma.medication.findUnique({
+      where: { id: medicationId },
+      include: { patient: true },
+    });
+
+    // Audit log BEFORE deactivation
+    if (medication && user) {
+      await auditService.logFromRequest({
+        req,
+        action: AuditActions.DELETE_MEDICATION,
+        resourceType: ResourceTypes.MEDICATION,
+        resourceId: medicationId,
+        metadata: { medicationName: medication.name, dosage: medication.dosage },
+        familyId: medication.patient.familyId,
+        userId: user.id,
+      });
     }
 
     await prisma.medication.update({

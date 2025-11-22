@@ -14,8 +14,14 @@ import recommendationRoutes from './recommendation.routes';
 import providerRoutes from './provider.routes';
 import nutritionRoutes from './nutrition.routes';
 import calendarRoutes from './calendar.routes';
+import jobsRoutes from './jobs.routes';
+import userSettingsRoutes from './userSettings.routes';
+import { getCsrfToken } from '../middleware/csrf';
 
 export function setupRoutes(app: Express) {
+  // CSRF token endpoint (must be before CSRF protection middleware)
+  app.get('/api/v1/csrf-token', getCsrfToken);
+
   // Debug routes (temporary)
   app.use(debugRoutes);
 
@@ -57,6 +63,12 @@ export function setupRoutes(app: Express) {
 
   // Calendar integration routes
   app.use('/api/v1/calendar', calendarRoutes);
+
+  // Job monitoring routes
+  app.use('/api/v1', jobsRoutes);
+
+  // User settings routes
+  app.use('/api/v1/users', userSettingsRoutes);
 
   // 404 handler
   app.use((req, res) => {

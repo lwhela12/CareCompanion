@@ -4,6 +4,7 @@ import { prisma } from '@carecompanion/database';
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
+import { logger } from '../utils/logger';
 import crypto from 'crypto';
 
 const impersonateSchema = z.object({
@@ -246,7 +247,7 @@ export class AuthController {
         email: patient.user.email,
       });
     } catch (error: any) {
-      console.error('Error resetting password:', error);
+      logger.error('Error resetting password:', error);
       throw new ApiError(ErrorCodes.EXTERNAL_SERVICE_ERROR, 'Failed to reset password', 500);
     }
   }
@@ -290,7 +291,7 @@ export class AuthController {
         tempPassword,
       };
     } catch (error: any) {
-      console.error('Error creating patient user:', error);
+      logger.error('Error creating patient user:', error);
       throw new ApiError(ErrorCodes.EXTERNAL_SERVICE_ERROR, 'Failed to create patient user account', 500);
     }
   }

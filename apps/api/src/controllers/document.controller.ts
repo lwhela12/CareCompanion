@@ -8,6 +8,7 @@ import { s3Service } from '../services/s3.service';
 import { config } from '../config';
 import { openAiService } from '../services/ai/openai.service';
 import { logger } from '../utils/logger';
+import { auditService, AuditActions, ResourceTypes } from '../services/audit.service';
 import { extractFactsFromParsedDocument } from '../services/factExtraction.service';
 import { documentProcessingService } from '../services/documentProcessing.service';
 
@@ -346,8 +347,19 @@ export class DocumentController {
       },
     });
 
-    // TODO: Queue document processing job here
-    // await jobQueue.add('processDocument', { documentId: document.id, familyId });
+    // Document processing is triggered via the /parse endpoint or can be queued
+    // See documentProcessingService for background processing options
+
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.CREATE_DOCUMENT,
+      resourceType: ResourceTypes.DOCUMENT,
+      resourceId: document.id,
+      metadata: { title, type, tags },
+      familyId,
+      userId: user.id,
+    });
 
     res.status(201).json({ document });
   }
@@ -437,6 +449,17 @@ export class DocumentController {
       throw new ApiError(ErrorCodes.FORBIDDEN, 'Access denied', 403);
     }
 
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.VIEW_DOCUMENT,
+      resourceType: ResourceTypes.DOCUMENT,
+      resourceId: document.id,
+      metadata: { title: document.title, type: document.type },
+      familyId: document.familyId,
+      userId: user.id,
+    });
+
     res.json({ document });
   }
 
@@ -481,6 +504,17 @@ export class DocumentController {
     }
 
     const downloadUrl = await s3Service.getPresignedDownloadUrl(key);
+
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.DOWNLOAD_DOCUMENT,
+      resourceType: ResourceTypes.DOCUMENT,
+      resourceId: document.id,
+      metadata: { title: document.title, type: document.type },
+      familyId: document.familyId,
+      userId: user.id,
+    });
 
     res.json({ downloadUrl, expiresIn: 3600 });
   }
@@ -544,6 +578,17 @@ export class DocumentController {
       },
     });
 
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.UPDATE_DOCUMENT,
+      resourceType: ResourceTypes.DOCUMENT,
+      resourceId: document.id,
+      metadata: { updates, previousTitle: document.title },
+      familyId: document.familyId,
+      userId: user.id,
+    });
+
     res.json({ document: updatedDocument });
   }
 
@@ -593,9 +638,20 @@ export class DocumentController {
         await s3Service.deleteFile(key);
       } catch (error) {
         // Log error but continue with database deletion
-        console.error('Failed to delete file from S3:', error);
+        logger.error('Failed to delete file from S3:', error);
       }
     }
+
+    // Audit log BEFORE deletion (to capture what was deleted)
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.DELETE_DOCUMENT,
+      resourceType: ResourceTypes.DOCUMENT,
+      resourceId: document.id,
+      metadata: { title: document.title, type: document.type },
+      familyId: document.familyId,
+      userId: user.id,
+    });
 
     // Delete from database
     await prisma.document.delete({

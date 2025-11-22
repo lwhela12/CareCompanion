@@ -11,19 +11,17 @@ interface EmailOptions {
 
 class EmailService {
   private transporter: nodemailer.Transporter | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initializeTransporter();
+    this.initPromise = this.initializeTransporter();
   }
 
-  private initializeTransporter() {
+  private async initializeTransporter(): Promise<void> {
     if (config.nodeEnv === 'development') {
       // Use Ethereal Email for development
-      nodemailer.createTestAccount((err, account) => {
-        if (err) {
-          logger.error('Failed to create test email account:', err);
-          return;
-        }
+      try {
+        const account = await nodemailer.createTestAccount();
 
         this.transporter = nodemailer.createTransport({
           host: account.smtp.host,
@@ -35,27 +33,60 @@ class EmailService {
           },
         });
 
-        logger.info('Test email account created:', account.user);
-      });
+        logger.info('Test email account created', { user: account.user });
+      } catch (err) {
+        logger.error('Failed to create test email account', { error: err });
+        throw err;
+      }
     } else {
       // Use real email service in production
-      // Configure based on your email provider (SendGrid, AWS SES, etc.)
+      const smtpHost = process.env.SMTP_HOST;
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+
+      if (!smtpHost || !smtpUser || !smtpPass) {
+        logger.warn('SMTP credentials not configured. Email sending will fail in production.', {
+          hasHost: !!smtpHost,
+          hasUser: !!smtpUser,
+          hasPass: !!smtpPass,
+        });
+
+        // Create a dummy transporter that will fail gracefully
+        this.transporter = null;
+        return;
+      }
+
       this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
+        host: smtpHost,
         port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
+        secure: process.env.SMTP_SECURE === 'true', // true for port 465, false for others
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+          user: smtpUser,
+          pass: smtpPass,
         },
       });
+
+      // Verify SMTP connection
+      try {
+        await this.transporter.verify();
+        logger.info('SMTP connection verified successfully');
+      } catch (error) {
+        logger.error('SMTP connection verification failed', { error });
+        throw error;
+      }
     }
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
+    // Wait for transporter to be initialized
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+
     if (!this.transporter) {
-      logger.error('Email transporter not initialized');
-      return;
+      const error = 'Email transporter not initialized. Check SMTP configuration.';
+      logger.error(error);
+      throw new Error(error);
     }
 
     const mailOptions = {
@@ -68,14 +99,26 @@ class EmailService {
 
     try {
       const info = await this.transporter.sendMail(mailOptions);
-      
+
       if (config.nodeEnv === 'development') {
-        logger.info('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        logger.info('Email sent (test mode)', {
+          messageId: info.messageId,
+          previewUrl,
+        });
+      } else {
+        logger.info('Email sent successfully', {
+          messageId: info.messageId,
+          to: options.to,
+          subject: options.subject,
+        });
       }
-      
-      logger.info('Email sent successfully:', info.messageId);
     } catch (error) {
-      logger.error('Failed to send email:', error);
+      logger.error('Failed to send email', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        to: options.to,
+        subject: options.subject,
+      });
       throw error;
     }
   }

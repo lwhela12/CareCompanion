@@ -42,6 +42,7 @@ model User {
   linkedPatientId        String?                @unique @map("linked_patient_id")
   createdAt              DateTime               @default(now()) @map("created_at")
   lastActive             DateTime?              @map("last_active")
+  notificationPreferences Json?                 @map("notification_preferences")
   auditLogs              AuditLog[]
   auditLogsImpersonated  AuditLog[]             @relation("ImpersonatedBy")
   careTaskLogs           CareTaskLog[]

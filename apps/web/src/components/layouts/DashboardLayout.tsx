@@ -15,11 +15,13 @@ import {
   ClipboardList,
   Stethoscope,
   Utensils,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { ChatWidget } from '@/components/ChatWidget';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
@@ -32,6 +34,7 @@ const navigation = [
   { name: 'Facts', href: '/facts', icon: FileText },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Family', href: '/family', icon: Users2 },
+  { name: 'Settings', href: '/settings', icon: SettingsIcon },
 ];
 
 const devNavigation = [
@@ -167,7 +170,9 @@ export function DashboardLayout() {
 
         {/* Page content */}
         <main className="p-4 sm:p-6">
-          <Outlet />
+          <ErrorBoundary fallbackType="inline">
+            <Outlet />
+          </ErrorBoundary>
         </main>
         <ChatWidget />
       </div>

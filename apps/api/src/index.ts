@@ -1,19 +1,54 @@
 import 'express-async-errors';
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import morgan from 'morgan';
 import { clerkMiddleware } from '@clerk/express';
 import { config } from './config';
 import { errorHandler } from './middleware/error';
+import { globalRateLimiter } from './middleware/rateLimit';
 import { logger } from './utils/logger';
+import { performHealthChecks } from './utils/healthChecks';
 import { setupRoutes } from './routes';
-import { initializeJobs } from './jobs';
+import { setupSwagger } from './config/swagger';
+import { initializeJobs, shutdownJobs } from './jobs';
 
 async function startServer() {
   const app = express();
 
+  // Initialize Sentry (optional - app works without it)
+  const sentryDsn = process.env.SENTRY_DSN;
+  const sentryEnvironment = process.env.SENTRY_ENVIRONMENT || config.nodeEnv;
+
+  if (sentryDsn) {
+    Sentry.init({
+      dsn: sentryDsn,
+      environment: sentryEnvironment,
+      integrations: [
+        nodeProfilingIntegration(),
+      ],
+      // Performance Monitoring
+      tracesSampleRate: sentryEnvironment === 'production' ? 0.1 : 1.0,
+      // Profiling
+      profilesSampleRate: sentryEnvironment === 'production' ? 0.1 : 1.0,
+      // Release tracking
+      release: process.env.APP_VERSION,
+      // Don't send errors in development unless explicitly enabled
+      enabled: sentryEnvironment === 'production' || process.env.SENTRY_ENABLED === 'true',
+    });
+    logger.info('Sentry initialized for environment:', { environment: sentryEnvironment });
+  }
+
+  // Sentry request handler must be the first middleware
+  app.use(Sentry.Handlers.requestHandler());
+  // Sentry tracing middleware for performance monitoring
+  app.use(Sentry.Handlers.tracingHandler());
+
   // Basic middleware
+  app.use(compression()); // Enable gzip compression for responses
   app.use(helmet());
   app.use(cors({
     origin: (origin, callback) => {
@@ -56,17 +91,38 @@ async function startServer() {
     secretKey: config.clerk.secretKey,
   }));
 
-  // Health check
-  app.get('/health', (req, res) => {
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      environment: config.nodeEnv,
-    });
+  // Apply global rate limiting
+  app.use(globalRateLimiter);
+
+  // Health check with service connectivity verification
+  app.get('/health', async (req, res) => {
+    try {
+      const healthStatus = await performHealthChecks();
+
+      // Return 200 for healthy/degraded, 503 for unhealthy
+      const statusCode = healthStatus.status === 'unhealthy' ? 503 : 200;
+
+      res.status(statusCode).json(healthStatus);
+    } catch (error) {
+      logger.error('Health check failed', { error });
+
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        environment: config.nodeEnv,
+        error: 'Health check failed to execute',
+      });
+    }
   });
+
+  // Setup API documentation
+  setupSwagger(app);
 
   // Setup routes
   setupRoutes(app);
+
+  // Sentry error handler must be before other error handlers
+  app.use(Sentry.Handlers.errorHandler());
 
   // Error handling
   app.use(errorHandler);
@@ -81,8 +137,14 @@ async function startServer() {
   });
 
   // Graceful shutdown
-  process.on('SIGTERM', () => {
+  process.on('SIGTERM', async () => {
     logger.info('SIGTERM received, shutting down gracefully');
+
+    // Shutdown jobs first
+    if (config.nodeEnv !== 'test') {
+      await shutdownJobs();
+    }
+
     server.close(() => {
       logger.info('Server closed');
       process.exit(0);

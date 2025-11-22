@@ -3,6 +3,7 @@ import { config } from '../../config';
 import { logger } from '../../utils/logger';
 import { prisma } from '@carecompanion/database';
 import crypto from 'crypto';
+import { encrypt, decrypt } from '../../utils/encryption';
 
 /**
  * Google OAuth Service for Calendar Integration
@@ -198,23 +199,19 @@ class GoogleOAuthService {
   }
 
   /**
-   * Encrypt token for storage
+   * Encrypt token for storage using AES-256-GCM
    */
-  private encryptToken(token: string): string {
-    const cipher = crypto.createCipher('aes-256-cbc', config.google.tokenSecret);
-    let encrypted = cipher.update(token, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return encrypted;
+  encryptToken(token: string): string {
+    // Use the centralized encryption utility for authenticated encryption
+    return encrypt(token);
   }
 
   /**
-   * Decrypt token from storage
+   * Decrypt token from storage using AES-256-GCM
    */
-  private decryptToken(encrypted: string): string {
-    const decipher = crypto.createDecipher('aes-256-cbc', config.google.tokenSecret);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
+  decryptToken(encrypted: string): string {
+    // Use the centralized encryption utility
+    return decrypt(encrypted);
   }
 }
 

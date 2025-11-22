@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
+import { z} from 'zod';
 import { prisma, JournalSentiment } from '@carecompanion/database';
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
+import { logger } from '../utils/logger';
+import { auditService, AuditActions, ResourceTypes } from '../services/audit.service';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 import OpenAI from 'openai';
 import { toFile } from 'openai/uploads';
@@ -78,6 +80,17 @@ export class JournalController {
           },
         },
       },
+    });
+
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.CREATE_JOURNAL,
+      resourceType: ResourceTypes.JOURNAL,
+      resourceId: entry.id,
+      metadata: { sentiment, isPrivate },
+      familyId,
+      userId: user.id,
     });
 
     res.status(201).json({ entry });
@@ -245,6 +258,17 @@ export class JournalController {
       },
     });
 
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.UPDATE_JOURNAL,
+      resourceType: ResourceTypes.JOURNAL,
+      resourceId: entryId,
+      metadata: { updates },
+      familyId: entry.familyId,
+      userId: user.id,
+    });
+
     res.json({ entry: updatedEntry });
   }
 
@@ -285,6 +309,17 @@ export class JournalController {
     if (!canDelete) {
       throw new ApiError(ErrorCodes.FORBIDDEN, 'Insufficient permissions to delete', 403);
     }
+
+    // Audit log BEFORE deletion
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.DELETE_JOURNAL,
+      resourceType: ResourceTypes.JOURNAL,
+      resourceId: entryId,
+      metadata: { sentiment: entry.sentiment, isPrivate: entry.isPrivate },
+      familyId: entry.familyId,
+      userId: user.id,
+    });
 
     await prisma.journalEntry.delete({
       where: { id: entryId },
@@ -443,11 +478,11 @@ export class JournalController {
         res.write('data: [DONE]\n\n');
         res.end();
       } catch (transcriptionError: any) {
-        console.error('Transcription failed:', transcriptionError);
+        logger.error('Transcription failed:', transcriptionError);
         throw transcriptionError;
       }
     } catch (error: any) {
-      console.error('Transcription error:', error);
+      logger.error('Transcription error:', error);
       
       // If headers haven't been sent yet, send error normally
       if (!res.headersSent) {

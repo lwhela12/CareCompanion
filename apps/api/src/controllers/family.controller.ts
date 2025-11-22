@@ -6,6 +6,8 @@ import { generateInviteToken } from '../utils/tokens';
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
+import { logger } from '../utils/logger';
+import { auditService, AuditActions, ResourceTypes } from '../services/audit.service';
 import { clerkClient } from '@clerk/express';
 import { authController } from './auth.controller';
 
@@ -141,7 +143,7 @@ export class FamilyController {
           tempPassword: patientUserResult.tempPassword,
         };
       } catch (error) {
-        console.error('Error creating patient user account:', error);
+        logger.error('Error creating patient user account:', error);
         // Don't fail the whole operation if patient account creation fails
       }
     }
@@ -164,9 +166,9 @@ export class FamilyController {
   // Get user's families
   async getUserFamilies(req: AuthRequest, res: Response) {
     try {
-      console.log('getUserFamilies - auth:', req.auth);
+      logger.debug('getUserFamilies - auth:', req.auth);
       const userId = req.auth!.userId;
-      console.log('getUserFamilies - userId:', userId);
+      logger.debug('getUserFamilies - userId:', userId);
 
       // First try to find user by Clerk ID
       let user = await prisma.user.findUnique({
@@ -236,7 +238,7 @@ export class FamilyController {
 
           if (existingUser) {
             // Update the Clerk ID to claim this account
-            console.log(`Claiming existing account for ${userEmail} with Clerk ID ${userId}`);
+            logger.debug(`Claiming existing account for ${userEmail} with Clerk ID ${userId}`);
             user = await prisma.user.update({
               where: { id: existingUser.id },
               data: { 
@@ -348,7 +350,7 @@ export class FamilyController {
         } : null,
       });
     } catch (error) {
-      console.error('Error getting user families:', error);
+      logger.error('Error getting user families:', error);
       throw error;
     }
   }
@@ -442,6 +444,17 @@ export class FamilyController {
         <a href="${process.env.FRONTEND_URL}/invitation/${token}" style="display: inline-block; padding: 12px 24px; background: #6B7FD7; color: white; text-decoration: none; border-radius: 8px;">Accept Invitation</a>
         <p>This invitation will expire in 7 days.</p>
       `,
+    });
+
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.INVITE_MEMBER,
+      resourceType: ResourceTypes.INVITATION,
+      resourceId: invitation.id,
+      metadata: { email, role, relationship },
+      familyId,
+      userId: member.userId,
     });
 
     res.status(201).json({
@@ -779,6 +792,17 @@ export class FamilyController {
       });
 
       return { user, familyMember, isPatient: isPatientInvitation };
+    });
+
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.ACCEPT_INVITATION,
+      resourceType: ResourceTypes.INVITATION,
+      resourceId: invitation.id,
+      metadata: { role: invitation.role, relationship: invitation.relationship },
+      familyId: invitation.familyId,
+      userId: result.user.id,
     });
 
     res.json({

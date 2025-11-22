@@ -4,6 +4,8 @@ import { prisma, CareTaskPriority, CareTaskStatus } from '@carecompanion/databas
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
+import { logger } from '../utils/logger';
+import { auditService, AuditActions, ResourceTypes } from '../services/audit.service';
 import { startOfDay, endOfDay, parseISO, addDays, addWeeks, addMonths, isBefore, isAfter } from 'date-fns';
 import { recurrenceService } from '../services/recurrence.service';
 
@@ -43,7 +45,7 @@ export class CareTaskController {
       const userId = req.auth!.userId;
       const { title, description, dueDate, reminderDate, assignedToId: rawAssignedToId, priority, isRecurring, recurrenceType, recurrenceEndDate } = validation.data;
 
-      console.log('Creating care task with data:', {
+      logger.debug('Creating care task with data:', {
         title,
         description,
         dueDate,
@@ -150,12 +152,23 @@ export class CareTaskController {
       },
     });
 
-    res.status(201).json({ 
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.CREATE_CARE_TASK,
+      resourceType: ResourceTypes.CARE_TASK,
+      resourceId: task.id,
+      metadata: { title, priority, isRecurring },
+      familyId,
+      userId: user.id,
+    });
+
+    res.status(201).json({
       task,
       message: isRecurring ? 'Recurring appointment created' : 'Appointment created'
     });
     } catch (error: any) {
-      console.error('Failed to create care task:', error);
+      logger.error('Failed to create care task:', error);
       throw error;
     }
   }
@@ -752,6 +765,17 @@ export class CareTaskController {
       throw new ApiError(ErrorCodes.FORBIDDEN, 'Insufficient permissions to delete', 403);
     }
 
+    // Audit log BEFORE deletion
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.DELETE_CARE_TASK,
+      resourceType: ResourceTypes.CARE_TASK,
+      resourceId: taskId,
+      metadata: { title: task.title },
+      familyId: task.familyId,
+      userId: user.id,
+    });
+
     await prisma.careTask.delete({
       where: { id: taskId },
     });
@@ -876,6 +900,17 @@ export class CareTaskController {
         action: 'completed',
         notes,
       },
+    });
+
+    // Audit log
+    await auditService.logFromRequest({
+      req,
+      action: AuditActions.COMPLETE_CARE_TASK,
+      resourceType: ResourceTypes.CARE_TASK,
+      resourceId: actualTaskId,
+      metadata: { title: updatedTask.title, notes },
+      familyId: updatedTask.familyId,
+      userId: user.id,
     });
 
     res.json({ task: updatedTask });

@@ -49,6 +49,9 @@ export const config = {
 
   // Logging
   logLevel: process.env.LOG_LEVEL || 'debug',
+
+  // Encryption (for OAuth tokens, sensitive data)
+  encryptionKey: process.env.ENCRYPTION_KEY || '',
   
   // Rate limiting
   rateLimit: {

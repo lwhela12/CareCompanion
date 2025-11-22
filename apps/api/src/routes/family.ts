@@ -110,8 +110,8 @@ router.post(
         );
       }
 
-      // TODO: Send invitation email
-      // For now, we'll just create a placeholder response
+      // Invitation emails are sent via family.controller.ts inviteMember method
+      // This is a legacy placeholder endpoint
       res.json({
         message: 'Invitation sent',
         invitation: {

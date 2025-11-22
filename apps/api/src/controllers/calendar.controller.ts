@@ -3,6 +3,7 @@ import { prisma, CalendarProvider, SyncEventType } from '@carecompanion/database
 import { googleOAuthService } from '../services/calendar/googleOAuth.service';
 import { calendarSyncService } from '../services/calendar/calendarSync.service';
 import { logger } from '../utils/logger';
+import { encrypt } from '../utils/encryption';
 
 /**
  * Calendar Controller
@@ -313,15 +314,10 @@ class CalendarController {
   }
 
   /**
-   * Helper: Encrypt token (using same logic as OAuth service)
-   * TODO: Consider moving to shared utility
+   * Helper: Encrypt token using centralized encryption utility
    */
   private encryptToken(token: string): string {
-    const crypto = require('crypto');
-    const cipher = crypto.createCipher('aes-256-cbc', process.env.GOOGLE_TOKEN_SECRET || 'default-token-secret');
-    let encrypted = cipher.update(token, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return encrypted;
+    return encrypt(token);
   }
 }
 

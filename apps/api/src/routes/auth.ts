@@ -7,6 +7,7 @@ import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { authenticate } from '../middleware/auth';
 import { authController } from '../controllers/auth.controller';
+import { authRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -18,7 +19,7 @@ const registerSchema = z.object({
   inviteCode: z.string().optional(),
 });
 
-router.post('/register', validate(registerSchema), async (req, res, next) => {
+router.post('/register', authRateLimiter, validate(registerSchema), async (req, res, next) => {
   try {
     const { clerkUserId, familyName, inviteCode } = req.body;
 
@@ -42,7 +43,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
     let role: string = 'admin';
 
     if (inviteCode) {
-      // TODO: Implement invite code logic
+      // Invite code flow is handled via /invitation/:token endpoint in family routes
       throw new ApiError(
         ErrorCodes.NOT_FOUND,
         'Invalid invite code',

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { documentController } from '../controllers/document.controller';
 import { authenticate } from '../middleware/auth';
+import { uploadRateLimiter, aiRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -8,7 +9,7 @@ const router = Router();
 router.use(authenticate);
 
 // Get presigned URL for upload
-router.post('/documents/upload-url', async (req, res, next) => {
+router.post('/documents/upload-url', uploadRateLimiter, async (req, res, next) => {
   try {
     await documentController.getUploadUrl(req, res);
   } catch (error) {
@@ -17,7 +18,7 @@ router.post('/documents/upload-url', async (req, res, next) => {
 });
 
 // Create document metadata after upload
-router.post('/documents', async (req, res, next) => {
+router.post('/documents', uploadRateLimiter, async (req, res, next) => {
   try {
     await documentController.createDocument(req, res);
   } catch (error) {
@@ -53,7 +54,7 @@ router.get('/documents/:documentId/download', async (req, res, next) => {
 });
 
 // Parse a document (streaming SSE)
-router.post('/documents/:documentId/parse', async (req, res, next) => {
+router.post('/documents/:documentId/parse', aiRateLimiter, async (req, res, next) => {
   try {
     await documentController.parseDocument(req, res);
   } catch (error) {
