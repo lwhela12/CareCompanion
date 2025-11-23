@@ -71,6 +71,28 @@ export default {
         'lg': '0 4px 16px rgba(0, 0, 0, 0.08)',
         'xl': '0 8px 32px rgba(0, 0, 0, 0.12)',
       },
+      keyframes: {
+        'shrink-to-corner': {
+          '0%': {
+            transform: 'scale(1) translate(0, 0)',
+            opacity: '1',
+            borderRadius: '0',
+          },
+          '100%': {
+            transform: 'scale(0.1) translate(40vw, 40vh)',
+            opacity: '0',
+            borderRadius: '9999px',
+          },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+      animation: {
+        'shrink-to-corner': 'shrink-to-corner 0.7s ease-in-out forwards',
+        'fade-in': 'fade-in 0.3s ease-in-out forwards',
+      },
     },
   },
   plugins: [],

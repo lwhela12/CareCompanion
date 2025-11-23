@@ -24,6 +24,9 @@ export const config = {
   // OpenAI
   openaiApiKey: process.env.OPENAI_API_KEY!,
 
+  // Anthropic (for onboarding AI)
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+
   // Google Calendar OAuth
   google: {
     clientId: process.env.GOOGLE_CALENDAR_CLIENT_ID || '',
@@ -56,7 +59,7 @@ export const config = {
   // Rate limiting
   rateLimit: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: 1000, // 1000 requests per 15 minutes
   },
   
   // File upload

@@ -37,15 +37,46 @@ export interface VirtualTask {
 export class RecurrenceService {
   /**
    * Parse recurrence rule from string format
+   * Supports both legacy format (e.g., "daily;2025-01-01") and RRULE format (e.g., "FREQ=DAILY")
    */
   parseRecurrenceRule(rule: string): RecurrencePattern | null {
     if (!rule) return null;
-    
+
     try {
+      // Handle RRULE format (e.g., "FREQ=DAILY", "FREQ=WEEKLY;INTERVAL=2")
+      if (rule.includes('FREQ=')) {
+        const parts = rule.split(';');
+        let type: RecurrencePattern['type'] | null = null;
+        let endDate: Date | undefined;
+        let interval = 1;
+
+        for (const part of parts) {
+          if (part.startsWith('FREQ=')) {
+            const freq = part.replace('FREQ=', '').toLowerCase();
+            if (freq === 'daily') type = 'daily';
+            else if (freq === 'weekly') type = 'weekly';
+            else if (freq === 'monthly') type = 'monthly';
+          } else if (part.startsWith('INTERVAL=')) {
+            interval = parseInt(part.replace('INTERVAL=', ''), 10);
+          } else if (part.startsWith('UNTIL=')) {
+            endDate = new Date(part.replace('UNTIL=', ''));
+          }
+        }
+
+        // Handle biweekly (weekly with interval 2)
+        if (type === 'weekly' && interval === 2) {
+          type = 'biweekly';
+        }
+
+        if (!type) return null;
+        return { type, endDate };
+      }
+
+      // Handle legacy format (e.g., "daily;2025-01-01")
       const parts = rule.split(';');
       const type = parts[0] as RecurrencePattern['type'];
       const endDate = parts[1] ? new Date(parts[1]) : undefined;
-      
+
       return { type, endDate };
     } catch {
       return null;

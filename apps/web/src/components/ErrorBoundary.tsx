@@ -80,7 +80,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   Please try refreshing the page or going back to the home screen.
                 </p>
 
-                {process.env.NODE_ENV === 'development' && this.state.error && (
+                {import.meta.env.DEV && this.state.error && (
                   <div className="mb-6 p-4 bg-gray-100 rounded-lg text-left">
                     <p className="text-xs font-mono text-gray-700 break-all">
                       {this.state.error.toString()}
@@ -133,7 +133,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   Something went wrong while loading this content. Your other data is safe.
                 </p>
 
-                {process.env.NODE_ENV === 'development' && this.state.error && (
+                {import.meta.env.DEV && this.state.error && (
                   <div className="mb-4 p-3 bg-white rounded border border-red-200">
                     <p className="text-xs font-mono text-gray-700 break-all">
                       {this.state.error.toString()}

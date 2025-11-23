@@ -1,7 +1,90 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { MessageCircle, X, Loader2, Send, ExternalLink, Plus, History, ChevronLeft } from 'lucide-react';
+import { X, Loader2, Send, ExternalLink, Plus, History, ChevronLeft } from 'lucide-react';
+import { CeeCeeAvatar } from './CeeCeeAvatar';
+import { CeeCeeName } from './CeeCeeName';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
+
+// Dashboard welcome message shown after onboarding transition
+const DASHBOARD_WELCOME_MESSAGE = "This is your dashboard! You can see the medications and tasks I've added. If you have any questions, I am right here! You can bring me up and ask questions any time.";
+
+// Storage keys
+const CHAT_MESSAGES_KEY = 'ceecee_chat_messages';
+const CHAT_CONVERSATION_ID_KEY = 'ceecee_conversation_id';
+
+// Get onboarding conversation history if available (persists until cleared)
+function getOnboardingMessages(): { role: 'user' | 'assistant'; content: string }[] | null {
+  const stored = localStorage.getItem('ceecee_onboarding_messages');
+  if (stored) {
+    try {
+      const messages = JSON.parse(stored);
+      // Don't remove - persist for the session so closing/reopening widget keeps history
+      return messages;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// Clear onboarding messages (call when starting a fresh conversation)
+function clearOnboardingMessages(): void {
+  localStorage.removeItem('ceecee_onboarding_messages');
+}
+
+// Get persisted chat messages
+function getPersistedMessages(): { role: 'user' | 'assistant'; content: string }[] | null {
+  const stored = localStorage.getItem(CHAT_MESSAGES_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// Persist chat messages
+function persistMessages(messages: { role: 'user' | 'assistant'; content: string }[]): void {
+  localStorage.setItem(CHAT_MESSAGES_KEY, JSON.stringify(messages));
+}
+
+// Clear persisted messages
+function clearPersistedMessages(): void {
+  localStorage.removeItem(CHAT_MESSAGES_KEY);
+  localStorage.removeItem(CHAT_CONVERSATION_ID_KEY);
+}
+
+// Get persisted conversation ID
+function getPersistedConversationId(): string | null {
+  return localStorage.getItem(CHAT_CONVERSATION_ID_KEY);
+}
+
+// Persist conversation ID
+function persistConversationId(id: string | null): void {
+  if (id) {
+    localStorage.setItem(CHAT_CONVERSATION_ID_KEY, id);
+  } else {
+    localStorage.removeItem(CHAT_CONVERSATION_ID_KEY);
+  }
+}
+
+// Emit event when data is modified via chat (for other components to refresh)
+function emitDataChanged(): void {
+  window.dispatchEvent(new CustomEvent('ceecee-data-changed'));
+}
+
+// Get personalized greeting for returning users
+function getInitialGreeting(): string | null {
+  // Returning user greeting
+  const userName = localStorage.getItem('ceecee_user_name');
+  if (userName) {
+    return `Hey ${userName}, how can I help today?`;
+  }
+
+  return null;
+}
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
@@ -15,10 +98,17 @@ interface Conversation {
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Initialize messages from localStorage if available
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const persisted = getPersistedMessages();
+    return persisted || [];
+  });
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  // Initialize conversationId from localStorage if available
+  const [conversationId, setConversationId] = useState<string | null>(() => {
+    return getPersistedConversationId();
+  });
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -28,11 +118,48 @@ export function ChatWidget() {
   const [citationError, setCitationError] = useState('');
   const [citationData, setCitationData] = useState<any>(null);
 
+  // Auto-open chat when coming from onboarding (?welcome=true)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('welcome') === 'true') {
+      // Remove the param from URL without reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('welcome');
+      window.history.replaceState({}, '', url.toString());
+
+      // Load onboarding conversation history if available
+      const onboardingMessages = getOnboardingMessages();
+      if (onboardingMessages && onboardingMessages.length > 0) {
+        // Add the dashboard welcome message at the end
+        const messagesWithWelcome: ChatMessage[] = [
+          ...onboardingMessages,
+          { role: 'assistant', content: DASHBOARD_WELCOME_MESSAGE }
+        ];
+        setMessages(messagesWithWelcome);
+      }
+
+      // Open the chat
+      setOpen(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, open]);
+
+  // Persist messages whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      persistMessages(messages);
+    }
+  }, [messages]);
+
+  // Persist conversationId whenever it changes
+  useEffect(() => {
+    persistConversationId(conversationId);
+  }, [conversationId]);
 
   const getAuthToken = async (): Promise<string> => {
     try {
@@ -88,9 +215,42 @@ export function ChatWidget() {
   // Start a new conversation
   const startNewConversation = () => {
     setConversationId(null);
-    setMessages([]);
+    // Clear onboarding messages when explicitly starting fresh
+    clearOnboardingMessages();
+    // Clear persisted messages
+    clearPersistedMessages();
+    // Check for personalized greeting
+    const greeting = getInitialGreeting();
+    if (greeting) {
+      setMessages([{ role: 'assistant', content: greeting }]);
+    } else {
+      setMessages([]);
+    }
     setShowHistory(false);
   };
+
+  // Show greeting or load onboarding messages when widget opens with no messages
+  useEffect(() => {
+    if (open && messages.length === 0 && !conversationId && !showHistory) {
+      // First check for onboarding messages (persists until user starts new conversation)
+      const onboardingMessages = getOnboardingMessages();
+      if (onboardingMessages && onboardingMessages.length > 0) {
+        // Include the dashboard welcome if not already there
+        const hasWelcome = onboardingMessages.some(m => m.content === DASHBOARD_WELCOME_MESSAGE);
+        if (!hasWelcome) {
+          setMessages([...onboardingMessages, { role: 'assistant', content: DASHBOARD_WELCOME_MESSAGE }]);
+        } else {
+          setMessages(onboardingMessages);
+        }
+        return;
+      }
+      // Fall back to personalized greeting
+      const greeting = getInitialGreeting();
+      if (greeting) {
+        setMessages([{ role: 'assistant', content: greeting }]);
+      }
+    }
+  }, [open]);
 
   // Load history when panel opens
   useEffect(() => {
@@ -158,10 +318,15 @@ export function ChatWidget() {
 
   const send = async () => {
     const query = input.trim();
-    if (!query || isStreaming) return;
+    console.log('[ChatWidget] send() called, query:', query.substring(0, 30), 'isStreaming:', isStreaming);
+    if (!query || isStreaming) {
+      console.log('[ChatWidget] send() early return - query empty or already streaming');
+      return;
+    }
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: query }, { role: 'assistant', content: '' }]);
     setIsStreaming(true);
+    console.log('[ChatWidget] send() starting fetch');
 
     try {
       const resp = await fetch(`${API_URL}/api/v1/ai/chat`, {
@@ -170,7 +335,11 @@ export function ChatWidget() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await getAuthToken()}`,
         },
-        body: JSON.stringify({ query, conversationId }),
+        body: JSON.stringify({
+          query,
+          conversationId,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -179,12 +348,14 @@ export function ChatWidget() {
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
+      let deltaReceiveCount = 0;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
+        console.log('[ChatWidget] Chunk received, lines:', lines.length, 'raw:', chunk.substring(0, 100));
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6);
@@ -195,23 +366,31 @@ export function ChatWidget() {
               // New conversation created
               setConversationId(evt.conversationId);
             } else if (evt.type === 'delta' && typeof evt.text === 'string') {
+              deltaReceiveCount++;
+              console.log('[ChatWidget] Delta #' + deltaReceiveCount + ':', evt.text.substring(0, 50));
               setMessages((prev) => {
                 const copy = [...prev];
-                const last = copy[copy.length - 1];
+                const lastIdx = copy.length - 1;
+                const last = copy[lastIdx];
                 if (last && last.role === 'assistant') {
-                  last.content += evt.text;
+                  // Create new object instead of mutating to avoid React StrictMode issues
+                  copy[lastIdx] = { ...last, content: last.content + evt.text };
                 }
                 return copy;
               });
+            } else if (evt.type === 'tool_result' && evt.result?.success) {
+              // Tool was executed - emit event so other components can refresh
+              emitDataChanged();
             } else if (evt.type === 'done' && evt.conversationId) {
               // Ensure we have the conversation ID
               setConversationId(evt.conversationId);
             } else if (evt.type === 'error') {
               setMessages((prev) => {
                 const copy = [...prev];
-                const last = copy[copy.length - 1];
+                const lastIdx = copy.length - 1;
+                const last = copy[lastIdx];
                 if (last && last.role === 'assistant') {
-                  last.content = evt.message || 'An error occurred.';
+                  copy[lastIdx] = { ...last, content: evt.message || 'An error occurred.' };
                 }
                 return copy;
               });
@@ -223,18 +402,20 @@ export function ChatWidget() {
       setMessages((prev) => {
         if (prev.length === 0) return prev;
         const copy = [...prev];
-        const last = copy[copy.length - 1];
+        const lastIdx = copy.length - 1;
+        const last = copy[lastIdx];
         if (last && last.role === 'assistant' && last.content) {
-          last.content = sanitizeAnswer(last.content);
+          copy[lastIdx] = { ...last, content: sanitizeAnswer(last.content) };
         }
         return copy;
       });
     } catch (e: any) {
       setMessages((prev) => {
         const copy = [...prev];
-        const last = copy[copy.length - 1];
+        const lastIdx = copy.length - 1;
+        const last = copy[lastIdx];
         if (last && last.role === 'assistant') {
-          last.content = 'Sorry, I ran into an issue. Please try again.';
+          copy[lastIdx] = { ...last, content: 'Sorry, I ran into an issue. Please try again.' };
         }
         return copy;
       });
@@ -243,43 +424,26 @@ export function ChatWidget() {
     }
   };
 
-  // Sanitize answer: collapse stutters but preserve anchors like [fact:ID], [journal:ID], [document:ID]
+  // Sanitize answer: light cleanup while preserving anchors
+  // Note: Heavy deduplication removed since root cause was fixed in backend
   function sanitizeAnswer(text: string): string {
-    // Extract anchors
-    const anchorRegex = /\[(fact|journal|doc|document):[^\]]+\]/g;
-    const anchors: string[] = [];
-    const placeholder = (i: number) => `<<ANCHOR_${i}>>`;
-    const stripped = text.replace(anchorRegex, (m) => {
-      anchors.push(m);
-      return placeholder(anchors.length - 1);
-    });
-
-    // Collapse immediate duplicate words (case-sensitive minimal)
-    let cleaned = stripped.replace(/\b(\w+)(\s+\1\b)+/g, '$1');
-
-    // Collapse immediate duplicate bigrams (two-word sequences)
-    cleaned = cleaned.replace(/\b(\w+\s+\w+)(\s+\1\b)+/g, '$1');
-
     // Normalize multiple spaces/newlines
-    cleaned = cleaned.replace(/[ \t]{2,}/g, ' ');
+    let cleaned = text.replace(/[ \t]{2,}/g, ' ');
     cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 
-    // Restore anchors
-    const restored = cleaned.replace(/<<ANCHOR_(\d+)>>/g, (_m, idx) => anchors[Number(idx)] || _m);
-
-    // Optional: fix any duplicated label before anchors like 'journal [journal:ID]'
-    return restored.replace(/(journal|fact|document)\s+\[(journal|fact|document):/gi, '[$2:');
+    // Fix any duplicated label before anchors like 'journal [journal:ID]'
+    return cleaned.replace(/(journal|fact|document)\s+\[(journal|fact|document):/gi, '[$2:');
   }
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button - CeeCee */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 rounded-full bg-primary-600 text-white shadow-lg w-14 h-14 flex items-center justify-center hover:bg-primary-700"
-        aria-label="Open chat"
+        className="fixed bottom-6 right-6 z-40 rounded-full shadow-lg w-14 h-14 flex items-center justify-center hover:scale-105 transition-transform"
+        aria-label="Chat with CeeCee"
       >
-        <MessageCircle className="h-6 w-6" />
+        <CeeCeeAvatar size="lg" />
       </button>
 
       {/* Panel */}
@@ -300,6 +464,8 @@ export function ChatWidget() {
             ) : (
               <>
                 <div className="flex items-center gap-2">
+                  <CeeCeeAvatar size="sm" />
+                  <CeeCeeName />
                   <button
                     onClick={() => setShowHistory(true)}
                     className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
@@ -308,7 +474,6 @@ export function ChatWidget() {
                   >
                     <History className="h-4 w-4" />
                   </button>
-                  <div className="font-semibold text-gray-800">Care Chat</div>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -368,13 +533,27 @@ export function ChatWidget() {
                     Ask about medications, care tasks, journal notes, or recommendations. I'll cite sources like [fact:ID] and [journal:ID].
                   </div>
                 )}
-                {messages.map((m, idx) => (
-                  <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
-                    <div className={m.role === 'user' ? 'inline-block bg-primary-600 text-white px-3 py-2 rounded-xl max-w-[85%]' : 'inline-block bg-gray-100 text-gray-800 px-3 py-2 rounded-xl max-w-[85%]'}>
-                      <div className="text-sm">{m.role === 'assistant' ? renderWithCitations(m.content) : <span className="whitespace-pre-wrap break-words">{m.content}</span>}</div>
+                {messages.map((m, idx) => {
+                  const isLastMessage = idx === messages.length - 1;
+                  const isTyping = m.role === 'assistant' && isLastMessage && isStreaming && !m.content;
+
+                  return (
+                    <div key={idx} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start gap-2'}>
+                      {m.role === 'assistant' && <CeeCeeAvatar size="sm" className="flex-shrink-0 mt-1" />}
+                      <div className={m.role === 'user' ? 'inline-block bg-primary-600 text-white px-3 py-2 rounded-xl max-w-[85%]' : 'inline-block bg-gray-100 text-gray-800 px-3 py-2 rounded-xl max-w-[80%]'}>
+                        {isTyping ? (
+                          <div className="flex gap-1 py-1">
+                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        ) : (
+                          <div className="text-sm">{m.role === 'assistant' ? renderWithCitations(m.content) : <span className="whitespace-pre-wrap break-words">{m.content}</span>}</div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={bottomRef} />
               </div>
 

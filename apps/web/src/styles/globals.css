@@ -112,6 +112,32 @@
   }
 }
 
+/* CeeCee brand name styling - glossy purple gradient */
+.ceecee-name {
+  background: linear-gradient(
+    135deg,
+    var(--primary-600) 0%,
+    var(--primary-400) 40%,
+    var(--primary-300) 50%,
+    var(--primary-400) 60%,
+    var(--primary-600) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% 200%;
+  animation: ceecee-shimmer 1s ease-in-out forwards;
+}
+
+@keyframes ceecee-shimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 /* Custom animations */
 @keyframes pulse-ring {
   0% {

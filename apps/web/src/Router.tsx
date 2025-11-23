@@ -12,7 +12,8 @@ const Family = lazy(() => import('./pages/Family').then(m => ({ default: m.Famil
 const Documents = lazy(() => import('./pages/Documents').then(m => ({ default: m.Documents })));
 const Facts = lazy(() => import('./pages/Facts').then(m => ({ default: m.Facts })));
 const PatientPortal = lazy(() => import('./pages/PatientPortal').then(m => ({ default: m.PatientPortal })));
-const Onboarding = lazy(() => import('./pages/Onboarding').then(m => ({ default: m.Onboarding })));
+const OnboardingChat = lazy(() => import('./pages/OnboardingChat').then(m => ({ default: m.OnboardingChat })));
+const OnboardingClassic = lazy(() => import('./pages/Onboarding').then(m => ({ default: m.Onboarding })));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(m => ({ default: m.AcceptInvitation })));
 const DevInvitations = lazy(() => import('./pages/DevInvitations').then(m => ({ default: m.DevInvitations })));
 const Calendar = lazy(() => import('./pages/Calendar'));
@@ -51,7 +52,8 @@ export function Router({ isSignedIn }: RouterProps) {
           <>
             {/* Root redirect - checks user type and redirects appropriately */}
             <Route index element={<RootRedirect />} />
-            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/onboarding" element={<OnboardingChat />} />
+            <Route path="/onboarding/classic" element={<OnboardingClassic />} />
             <Route path="/patient" element={<PatientPortal />} />
             <Route path="/dev/invitations" element={<DevInvitations />} />
             <Route element={<DashboardLayout />}>

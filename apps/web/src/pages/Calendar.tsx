@@ -56,6 +56,17 @@ export default function Calendar() {
     fetchCalendarData();
   }, []); // Only fetch on mount
 
+  // Listen for data changes from CeeCee chat (when tasks/meds are added via chat)
+  useEffect(() => {
+    const handleDataChanged = () => {
+      fetchCalendarData();
+    };
+    window.addEventListener('ceecee-data-changed', handleDataChanged);
+    return () => {
+      window.removeEventListener('ceecee-data-changed', handleDataChanged);
+    };
+  }, []);
+
   useEffect(() => {
     // Filter events based on current filter settings
     const filtered = allEvents.filter(event => {
@@ -141,7 +152,9 @@ export default function Calendar() {
       const taskEvents: CalendarEvent[] = [];
       if (tasksRes.data.tasks) {
         tasksRes.data.tasks.forEach((task: any) => {
-          if (task.dueDate) {
+          // Use dueDate, or fall back to reminderDate, or createdAt for display
+          const taskDate = task.dueDate || task.reminderDate || task.createdAt;
+          if (taskDate) {
             // Check the type of task based on emoji in description
             const isMedicalAppointment = task.description?.includes('🏥');
             const isSocialVisit = task.description?.includes('👥') || task.description?.includes('👨‍👩‍👧‍👦');
@@ -167,7 +180,7 @@ export default function Calendar() {
             taskEvents.push({
               id: task.isVirtual ? task.id : `task-${task.id}`,
               title: displayTitle,
-              start: parseISO(task.dueDate),
+              start: parseISO(taskDate),
               color,
               extendedProps: {
                 type,

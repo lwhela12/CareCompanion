@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import OpenAI from 'openai';
 import { prisma } from '@carecompanion/database';
-import { config } from '../config';
 import { buildFactsHeader } from '../services/factsHeader.service';
 import { aiRateLimiter } from '../middleware/rateLimit';
 import { conversationService } from '../services/conversation.service';
+import { chatAIService } from '../services/chatAI.service';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -133,7 +132,7 @@ async function buildEnhancedContext(familyId: string, query: string) {
   return contextParts.join('\n');
 }
 
-// Enhanced chat endpoint with conversation support
+// Enhanced chat endpoint with conversation support and tool use
 router.post('/chat', aiRateLimiter, async (req, res) => {
   // SSE headers
   res.writeHead(200, {
@@ -149,7 +148,7 @@ router.post('/chat', aiRateLimiter, async (req, res) => {
 
   try {
     // Input
-    const { query, conversationId } = req.body || {};
+    const { query, conversationId, timezone } = req.body || {};
     if (!query || typeof query !== 'string' || !query.trim()) {
       sse({ type: 'error', message: 'Missing query' });
       res.end();
@@ -177,6 +176,12 @@ router.post('/chat', aiRateLimiter, async (req, res) => {
 
     const familyId = user.familyMembers[0].familyId;
     const patient = user.familyMembers[0].family.patient;
+
+    if (!patient) {
+      sse({ type: 'error', message: 'No patient found' });
+      res.end();
+      return;
+    }
 
     // Create or get conversation
     let activeConversationId = conversationId;
@@ -218,73 +223,62 @@ router.post('/chat', aiRateLimiter, async (req, res) => {
       10
     );
 
-    // OpenAI stream
-    if (!config.openaiApiKey) {
-      sse({ type: 'error', message: 'OpenAI not configured' });
-      res.end();
-      return;
-    }
-    const openai = new OpenAI({ apiKey: config.openaiApiKey });
+    // Build chat context
+    const patientName = `${patient.firstName} ${patient.lastName}`;
+    const chatContext = {
+      familyId,
+      userId: user.id,
+      patientId: patient.id,
+      patientName,
+      userName: user.firstName || 'Caregiver',
+      timezone: timezone || 'America/New_York', // Default to Eastern if not provided
+    };
 
-    const patientName = patient ? `${patient.firstName} ${patient.lastName}` : 'the patient';
-
-    const systemPrompt = `You are a helpful family care assistant for ${patientName}'s care team.
-
-Your role is to help caregivers find information, answer questions about the patient's care, and provide helpful guidance based on the available data.
-
-Guidelines:
-- Answer based on the provided context. Include citations using anchors like [journal:ID], [fact:ID], or [document:ID] when referencing specific information.
-- If information isn't available in the context, say so honestly and suggest where to find it.
-- Be concise but thorough. Caregivers are busy and need actionable information.
-- For medical questions, always recommend consulting healthcare providers for medical decisions.
-- Maintain patient dignity and privacy - summarize sensitive information clinically.
-- Do not repeat words or phrases (no stuttering). Write each sentence once, clearly.`;
-
-    // Build messages array with history
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      { role: 'system', content: systemPrompt },
-    ];
-
-    // Add context as a system message
-    messages.push({
-      role: 'system',
-      content: `Here is the current context about ${patientName}'s care:\n\n${contextText}`,
-    });
-
-    // Add conversation history (skip the last message which is the current query)
+    // Build messages for Claude (skip the last message which is the current query we just added)
     const historyWithoutCurrent = conversationHistory.slice(0, -1);
-    for (const msg of historyWithoutCurrent) {
-      messages.push({
-        role: msg.role === 'USER' ? 'user' : 'assistant',
-        content: msg.content,
-      });
-    }
-
-    // Add current query
+    const messages: { role: 'user' | 'assistant'; content: string }[] = historyWithoutCurrent.map((msg) => ({
+      role: msg.role === 'USER' ? 'user' as const : 'assistant' as const,
+      content: msg.content,
+    }));
     messages.push({ role: 'user', content: query });
 
-    const stream = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
-      max_completion_tokens: 32000,
-      stream: true,
-      messages,
-    });
-
+    // Stream response from Claude with tool support
     let fullResponse = '';
-    for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) {
-        fullResponse += delta;
-        sse({ type: 'delta', text: delta });
+    let deltaCount = 0;
+    for await (const event of chatAIService.chat(messages, chatContext, contextText)) {
+      switch (event.type) {
+        case 'text':
+          deltaCount++;
+          fullResponse += event.content || '';
+          logger.debug('SSE delta sent', { deltaCount, textLength: (event.content || '').length, preview: (event.content || '').substring(0, 30) });
+          sse({ type: 'delta', text: event.content });
+          break;
+
+        case 'tool_use':
+          sse({ type: 'tool_use', toolName: event.toolName, input: event.toolInput });
+          break;
+
+        case 'tool_result':
+          sse({ type: 'tool_result', toolName: event.toolName, result: event.toolResult });
+          break;
+
+        case 'done':
+          break;
+
+        case 'error':
+          sse({ type: 'error', message: event.content });
+          break;
       }
     }
 
     // Save assistant response to conversation
-    await conversationService.addMessage({
-      conversationId: activeConversationId,
-      role: 'ASSISTANT',
-      content: fullResponse,
-    });
+    if (fullResponse) {
+      await conversationService.addMessage({
+        conversationId: activeConversationId,
+        role: 'ASSISTANT',
+        content: fullResponse,
+      });
+    }
 
     sse({ type: 'done', conversationId: activeConversationId });
     res.end();
