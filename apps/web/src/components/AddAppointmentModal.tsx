@@ -151,14 +151,14 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={onClose} />
-        
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
-          <div className="flex items-center justify-between p-6 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">Add Appointment</h3>
+        <div className="fixed inset-0 bg-gray-500 dark:bg-black bg-opacity-75 dark:bg-opacity-70" onClick={onClose} />
+
+        <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Appointment</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
+              className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
             >
               <X className="h-5 w-5" />
             </button>
@@ -168,7 +168,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
             <div className="space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Appointment Title
                 </label>
                 <input
@@ -176,20 +176,20 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="e.g., Cardiology Checkup"
                 />
               </div>
 
               {/* Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Appointment Type
                 </label>
                 <select
                   value={formData.appointmentType}
                   onChange={(e) => setFormData({ ...formData, appointmentType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="medical">Medical Appointment</option>
                   <option value="therapy">Therapy Session</option>
@@ -202,7 +202,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
 
               {/* Provider/Person */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <User className="inline h-4 w-4 mr-1" />
                   {['social', 'family'].includes(formData.appointmentType) ? 'Who' : 'Provider/Doctor'}
                 </label>
@@ -210,21 +210,21 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                   type="text"
                   value={formData.provider}
                   onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder={['social', 'family'].includes(formData.appointmentType) ? 'e.g., John, Mary' : 'e.g., Dr. Smith'}
                 />
               </div>
 
               {/* Assigned To */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <UserCheck className="inline h-4 w-4 mr-1" />
                   Assigned To
                 </label>
                 <select
                   value={formData.assignedToId}
                   onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="">No assignment (family shared)</option>
                   {patient && (
@@ -242,7 +242,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
 
               {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <MapPin className="inline h-4 w-4 mr-1" />
                   Location
                 </label>
@@ -250,7 +250,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="e.g., Memorial Hospital, Room 302"
                 />
               </div>
@@ -258,7 +258,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
               {/* Date and Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     <Calendar className="inline h-4 w-4 mr-1" />
                     Date
                   </label>
@@ -267,11 +267,11 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     <Clock className="inline h-4 w-4 mr-1" />
                     Time
                   </label>
@@ -280,22 +280,22 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                     required
                     value={formData.time}
                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
               </div>
 
               {/* Recurring Appointment */}
-              <div className="border-t pt-4">
+              <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
                 <div className="flex items-center gap-2 mb-4">
                   <input
                     type="checkbox"
                     id="recurring"
                     checked={formData.isRecurring}
                     onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
-                    className="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                    className="h-4 w-4 text-purple-600 rounded border-gray-300 dark:border-slate-600 focus:ring-purple-500"
                   />
-                  <label htmlFor="recurring" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="recurring" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Make this a recurring appointment
                   </label>
                 </div>
@@ -304,13 +304,13 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                   <div className="space-y-4 mb-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Repeat
                         </label>
                         <select
                           value={formData.recurrenceType}
                           onChange={(e) => setFormData({ ...formData, recurrenceType: e.target.value as any })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         >
                           <option value="daily">Daily</option>
                           <option value="weekly">Weekly</option>
@@ -319,7 +319,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           End Date (Optional)
                         </label>
                         <input
@@ -328,11 +328,11 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                           onChange={(e) => setFormData({ ...formData, recurrenceEndDate: e.target.value })}
                           min={formData.date}
                           placeholder="No end date"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         />
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Leave end date empty for indefinite recurrence
                     </p>
                   </div>
@@ -341,7 +341,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <FileText className="inline h-4 w-4 mr-1" />
                   Notes
                 </label>
@@ -349,7 +349,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Any special instructions or things to remember..."
                 />
               </div>
@@ -360,7 +360,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
               >
                 Cancel
               </button>

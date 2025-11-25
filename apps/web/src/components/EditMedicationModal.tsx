@@ -139,21 +139,21 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                <Pill className="h-5 w-5 text-primary-600" />
+              <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center">
+                <Pill className="h-5 w-5 text-primary-600 dark:text-primary-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900">Edit Medication</h3>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Edit Medication</h3>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
-              <X className="h-5 w-5 text-gray-500" />
+              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
         </div>
@@ -161,32 +161,32 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           {/* Basic Information */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Basic Information</h4>
-            
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Basic Information</h4>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Medication Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => updateFormData('name', e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="e.g., Metformin"
                   required
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Dosage <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.dosage}
                   onChange={(e) => updateFormData('dosage', e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="e.g., 500mg, 2 pills"
                   required
                 />
@@ -194,14 +194,14 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Prescribed by
               </label>
               <input
                 type="text"
                 value={formData.prescribedBy}
                 onChange={(e) => updateFormData('prescribedBy', e.target.value)}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="e.g., Dr. Smith"
               />
             </div>
@@ -209,16 +209,16 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
 
           {/* Schedule */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Schedule</h4>
-            
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Schedule</h4>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Frequency <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.frequency}
                 onChange={(e) => handleFrequencyChange(e.target.value)}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 {commonFrequencies.map((freq) => (
                   <option key={freq.value} value={freq.value}>
@@ -230,7 +230,7 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
 
             {formData.frequency !== 'as needed' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Times <span className="text-red-500">*</span>
                 </label>
                 <div className="space-y-2">
@@ -240,14 +240,14 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
                         type="time"
                         value={time}
                         onChange={(e) => updateScheduleTime(index, e.target.value)}
-                        className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         required
                       />
                       {formData.scheduleTimes.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeScheduleTime(index)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         >
                           <Minus className="h-4 w-4" />
                         </button>
@@ -257,7 +257,7 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
                   <button
                     type="button"
                     onClick={addScheduleTime}
-                    className="flex items-center gap-2 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                    className="flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium"
                   >
                     <Plus className="h-4 w-4" />
                     Add time
@@ -268,20 +268,20 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Start Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={formData.startDate}
                   onChange={(e) => updateFormData('startDate', e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   required
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   End Date
                 </label>
                 <input
@@ -289,7 +289,7 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
                   value={formData.endDate}
                   onChange={(e) => updateFormData('endDate', e.target.value)}
                   min={formData.startDate}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
             </div>
@@ -297,13 +297,13 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
 
           {/* Instructions */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Instructions
             </label>
             <textarea
               value={formData.instructions}
               onChange={(e) => updateFormData('instructions', e.target.value)}
-              className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               rows={3}
               placeholder="e.g., Take with food, avoid alcohol"
             />
@@ -319,7 +319,7 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
                 onChange={(e) => updateFormData('trackSupply', e.target.checked)}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
-              <label htmlFor="trackSupply" className="font-semibold text-gray-900">
+              <label htmlFor="trackSupply" className="font-semibold text-gray-900 dark:text-gray-100">
                 Track pill supply and refills
               </label>
             </div>
@@ -327,28 +327,28 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
             {formData.trackSupply && (
               <div className="grid grid-cols-3 gap-4 pl-7">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Dosage Amount
                   </label>
                   <input
                     type="number"
                     value={formData.dosageAmount}
                     onChange={(e) => updateFormData('dosageAmount', e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     placeholder="e.g., 2"
                     min="0.1"
                     step="0.1"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Unit
                   </label>
                   <select
                     value={formData.dosageUnit}
                     onChange={(e) => updateFormData('dosageUnit', e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   >
                     {dosageUnits.map((unit) => (
                       <option key={unit} value={unit}>
@@ -357,16 +357,16 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Current Supply
                   </label>
                   <input
                     type="number"
                     value={formData.currentSupply}
                     onChange={(e) => updateFormData('currentSupply', e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     placeholder="e.g., 60"
                     min="0"
                   />
@@ -376,7 +376,7 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
               {error}
             </div>
           )}
@@ -385,7 +385,7 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+              className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             >
               Cancel
             </button>

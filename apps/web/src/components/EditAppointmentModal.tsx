@@ -220,16 +220,16 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={onClose} />
-        
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
-          <div className="flex items-center justify-between p-6 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-gray-500 dark:bg-black bg-opacity-75 dark:bg-opacity-70" onClick={onClose} />
+
+        <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {isVirtual ? 'Edit Recurring Appointment' : 'Edit Appointment'}
             </h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
+              className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
             >
               <X className="h-5 w-5" />
             </button>
@@ -237,10 +237,10 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
 
           {(isVirtual || task?.parentTaskId) && (
             <div className="px-6 pt-4">
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
-                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-                  <div className="text-sm text-amber-800">
+                  <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5" />
+                  <div className="text-sm text-amber-800 dark:text-amber-300">
                     <p className="font-medium">This is a recurring appointment</p>
                     <p className="mt-1">Choose whether to edit just this occurrence or the entire series.</p>
                   </div>
@@ -255,7 +255,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
                       onChange={(e) => setEditMode(e.target.value as 'occurrence' | 'series')}
                       className="text-amber-600 focus:ring-amber-500"
                     />
-                    <span className="text-sm font-medium text-amber-800">This occurrence only</span>
+                    <span className="text-sm font-medium text-amber-800 dark:text-amber-300">This occurrence only</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -266,7 +266,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
                       onChange={(e) => setEditMode(e.target.value as 'occurrence' | 'series')}
                       className="text-amber-600 focus:ring-amber-500"
                     />
-                    <span className="text-sm font-medium text-amber-800">All occurrences</span>
+                    <span className="text-sm font-medium text-amber-800 dark:text-amber-300">All occurrences</span>
                   </label>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
             <div className="space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Appointment Title
                 </label>
                 <input
@@ -285,20 +285,20 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="e.g., Cardiology Checkup"
                 />
               </div>
 
               {/* Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Appointment Type
                 </label>
                 <select
                   value={formData.appointmentType}
                   onChange={(e) => setFormData({ ...formData, appointmentType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="medical">Medical Appointment</option>
                   <option value="therapy">Therapy Session</option>
@@ -311,7 +311,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
 
               {/* Provider/Person */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <User className="inline h-4 w-4 mr-1" />
                   {['social', 'family'].includes(formData.appointmentType) ? 'Who' : 'Provider/Doctor'}
                 </label>
@@ -319,21 +319,21 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
                   type="text"
                   value={formData.provider}
                   onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder={['social', 'family'].includes(formData.appointmentType) ? 'e.g., John, Mary' : 'e.g., Dr. Smith'}
                 />
               </div>
 
               {/* Assigned To */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <UserCheck className="inline h-4 w-4 mr-1" />
                   Assigned To
                 </label>
                 <select
                   value={formData.assignedToId}
                   onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="">No assignment (family shared)</option>
                   {patient && (
@@ -351,7 +351,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
 
               {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <MapPin className="inline h-4 w-4 mr-1" />
                   Location
                 </label>
@@ -359,7 +359,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="e.g., Memorial Hospital, Room 302"
                 />
               </div>
@@ -367,7 +367,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
               {/* Date and Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     <Calendar className="inline h-4 w-4 mr-1" />
                     Date
                   </label>
@@ -376,11 +376,11 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     <Clock className="inline h-4 w-4 mr-1" />
                     Time
                   </label>
@@ -389,14 +389,14 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
                     required
                     value={formData.time}
                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <FileText className="inline h-4 w-4 mr-1" />
                   Notes
                 </label>
@@ -404,7 +404,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Any special instructions or things to remember..."
                 />
               </div>
@@ -415,7 +415,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
               >
                 Cancel
               </button>

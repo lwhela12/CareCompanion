@@ -168,3 +168,68 @@
 *:focus-visible {
   @apply ring-4 ring-primary-100 rounded-lg dark:ring-primary-900/50;
 }
+
+/* FullCalendar Dark Mode */
+.dark .fc {
+  --fc-border-color: rgb(51 65 85); /* slate-700 */
+  --fc-page-bg-color: rgb(30 41 59); /* slate-800 */
+  --fc-neutral-bg-color: rgb(51 65 85); /* slate-700 */
+  --fc-list-event-hover-bg-color: rgb(51 65 85);
+  --fc-today-bg-color: rgba(139, 92, 246, 0.1); /* purple tint */
+}
+
+.dark .fc-theme-standard td,
+.dark .fc-theme-standard th,
+.dark .fc-theme-standard .fc-scrollgrid {
+  border-color: rgb(51 65 85);
+}
+
+.dark .fc-col-header-cell {
+  background-color: rgb(51 65 85);
+  color: rgb(243 244 246); /* gray-100 */
+}
+
+.dark .fc-daygrid-day-number {
+  color: rgb(209 213 219); /* gray-300 */
+}
+
+.dark .fc-daygrid-day.fc-day-other .fc-daygrid-day-number {
+  color: rgb(107 114 128); /* gray-500 */
+}
+
+.dark .fc-button-primary {
+  background-color: rgb(124 58 237); /* purple-600 */
+  border-color: rgb(124 58 237);
+}
+
+.dark .fc-button-primary:hover {
+  background-color: rgb(109 40 217); /* purple-700 */
+}
+
+.dark .fc-button-primary:disabled {
+  background-color: rgb(71 85 105); /* slate-600 */
+}
+
+.dark .fc-toolbar-title {
+  color: rgb(243 244 246); /* gray-100 */
+}
+
+.dark .fc-daygrid-day-top {
+  color: rgb(209 213 219); /* gray-300 */
+}
+
+.dark .fc-event {
+  border-color: transparent;
+}
+
+.dark .fc-daygrid-event-dot {
+  border-color: currentColor;
+}
+
+.dark .fc-timegrid-slot-label {
+  color: rgb(156 163 175); /* gray-400 */
+}
+
+.dark .fc-timegrid-axis {
+  color: rgb(156 163 175); /* gray-400 */
+}

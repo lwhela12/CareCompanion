@@ -141,25 +141,25 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
   };
 
   const getEventColor = () => {
-    if (isMedication) return 'bg-blue-100 text-blue-700';
-    if (isAppointment) return 'bg-purple-100 text-purple-700';
-    return 'bg-gray-100 text-gray-700';
+    if (isMedication) return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
+    if (isAppointment) return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400';
+    return 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300';
   };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={onClose} />
-        
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
-          <div className="flex items-center justify-between p-6 border-b">
+        <div className="fixed inset-0 bg-gray-500 dark:bg-black bg-opacity-75 dark:bg-opacity-70" onClick={onClose} />
+
+        <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${getEventColor()}`}>
                 {getIcon()}
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
-                <p className="text-sm text-gray-500">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{event.title}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {getEventTypeLabel()}
                   {event.extendedProps?.isVirtual && ' (Recurring)'}
                 </p>
@@ -167,7 +167,7 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
+              className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
             >
               <X className="h-5 w-5" />
             </button>
@@ -177,12 +177,12 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
             <div className="space-y-4">
               {/* Date and Time */}
               <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
+                <Clock className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {format(new Date(event.start), 'EEEE, MMMM d, yyyy')}
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {format(new Date(event.start), 'h:mm a')}
                     {event.end && ` - ${format(new Date(event.end), 'h:mm a')}`}
                   </p>
@@ -192,9 +192,9 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
               {/* Description */}
               {event.extendedProps?.description && (
                 <div className="flex items-start gap-3">
-                  <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <FileText className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
                       {event.extendedProps.description}
                     </p>
                   </div>
@@ -204,9 +204,9 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
               {/* Patient (for medications) */}
               {event.extendedProps?.patientName && (
                 <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <User className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Patient: {event.extendedProps.patientName}
                     </p>
                   </div>
@@ -216,9 +216,9 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
               {/* Assigned To */}
               {event.extendedProps?.assignedTo && (
                 <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <User className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Assigned to: {event.extendedProps.assignedTo.firstName} {event.extendedProps.assignedTo.lastName}
                     </p>
                   </div>
@@ -230,13 +230,13 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 mt-0.5">
                     <div className={`w-2 h-2 rounded-full mx-auto mt-1.5 ${
-                      event.extendedProps.status === 'completed' ? 'bg-green-500' : 
-                      event.extendedProps.status === 'in_progress' ? 'bg-yellow-500' : 
+                      event.extendedProps.status === 'completed' ? 'bg-green-500' :
+                      event.extendedProps.status === 'in_progress' ? 'bg-yellow-500' :
                       'bg-gray-400'
                     }`} />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Status: {event.extendedProps.status.replace('_', ' ')}
                     </p>
                   </div>
@@ -246,7 +246,7 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
 
             {/* Actions */}
             {(eventType === 'task' || eventType === 'appointment') && eventType !== 'medication' && (
-              <div className="flex gap-3 mt-6 pt-6 border-t">
+              <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
                 <button
                   onClick={handleEdit}
                   disabled={loading}
@@ -268,7 +268,7 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
                   <button
                     onClick={handleDelete}
                     disabled={loading}
-                    className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
+                    className="px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
                   >
                     Delete
                   </button>
@@ -277,8 +277,8 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
             )}
 
             {isMedication && (
-              <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-gray-500 text-center">
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                   To manage this medication, go to the Medications page
                 </p>
               </div>
