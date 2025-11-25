@@ -30,7 +30,8 @@
     "check:db": "./scripts/setup-db.sh",
     "dev:api": "cd apps/api && npm run dev",
     "dev:web": "cd apps/web && npm run dev",
-    "dev:both": "concurrently -n \"API,WEB\" -c \"blue,magenta\" \"npm run dev:api\" \"npm run dev:web\""
+    "dev:both": "concurrently -n \"API,WEB\" -c \"blue,magenta\" \"npm run dev:api\" \"npm run dev:web\"",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",
@@ -41,6 +42,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "husky": "^9.1.7",
     "prettier": "^3.2.4",
     "tsx": "^4.7.0",
     "turbo": "latest",

@@ -1,0 +1,12 @@
+# Check if schema.prisma is staged
+if git diff --cached --name-only | grep -q "packages/database/prisma/schema.prisma"; then
+  # Check if a migration file is also staged
+  if ! git diff --cached --name-only | grep -q "packages/database/prisma/migrations/"; then
+    echo "❌ ERROR: schema.prisma was modified but no migration was created!"
+    echo ""
+    echo "Run: cd packages/database && npx prisma migrate dev --name your_migration_name"
+    echo ""
+    echo "To bypass (not recommended): git commit --no-verify"
+    exit 1
+  fi
+fi
