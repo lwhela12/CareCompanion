@@ -8,7 +8,7 @@ import {
   Calendar,
   Pill
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, dateInputToLocalISOString, formatLocalDate } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface EditMedicationModalProps {
@@ -56,8 +56,8 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
     scheduleTimes: medication.scheduleTime,
     instructions: medication.instructions || '',
     prescribedBy: medication.prescribedBy || '',
-    startDate: format(new Date(medication.startDate), 'yyyy-MM-dd'),
-    endDate: medication.endDate ? format(new Date(medication.endDate), 'yyyy-MM-dd') : '',
+    startDate: formatLocalDate(new Date(medication.startDate)),
+    endDate: medication.endDate ? formatLocalDate(new Date(medication.endDate)) : '',
     currentSupply: medication.currentSupply?.toString() || '',
     trackSupply: !!(medication.currentSupply !== null && medication.currentSupply !== undefined),
     refillThreshold: medication.refillThreshold.toString(),
@@ -125,8 +125,8 @@ export function EditMedicationModal({ medication, onClose, onUpdate }: EditMedic
         scheduleTimes: formData.scheduleTimes.filter(t => t !== ''),
         instructions: formData.instructions || undefined,
         prescribedBy: formData.prescribedBy || undefined,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
+        startDate: dateInputToLocalISOString(formData.startDate),
+        endDate: formData.endDate ? dateInputToLocalISOString(formData.endDate) : undefined,
         currentSupply: formData.trackSupply && formData.currentSupply ? Number(formData.currentSupply) : undefined,
         refillThreshold: formData.trackSupply ? Number(formData.refillThreshold) : undefined,
       };

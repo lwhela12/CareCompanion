@@ -14,9 +14,9 @@ import {
   XCircle,
   Info
 } from 'lucide-react';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { cn } from '@/lib/utils';
+import { cn, localDayBounds } from '@/lib/utils';
 import { api, nutritionApi } from '@/lib/api';
 import { LogMealModal } from '@/components/LogMealModal';
 import { MealDetailModal } from '@/components/MealDetailModal';
@@ -82,11 +82,11 @@ const MEAL_TYPE_LABELS: Record<string, string> = {
 };
 
 const MEAL_TYPE_COLORS: Record<string, string> = {
-  BREAKFAST: 'bg-orange-100 text-orange-700',
-  LUNCH: 'bg-blue-100 text-blue-700',
-  DINNER: 'bg-purple-100 text-purple-700',
-  SNACK: 'bg-green-100 text-green-700',
-  OTHER: 'bg-gray-100 text-gray-700',
+  BREAKFAST: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  LUNCH: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  DINNER: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  SNACK: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  OTHER: 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-400',
 };
 
 export function Nutrition() {
@@ -114,13 +114,21 @@ export function Nutrition() {
         setPatientId(patientIdFromFamily);
 
         // Fetch today's meals, weekly summary, and templates
+        const { startISO, endISO, startDate, endDate } = localDayBounds(new Date());
+
         const [mealsResponse, summaryResponse, templatesResponse] = await Promise.all([
-          nutritionApi.getTodaysMeals(patientIdFromFamily),
+          nutritionApi.getMealLogs(patientIdFromFamily, { startDate: startISO, endDate: endISO }),
           nutritionApi.getWeeklySummary(patientIdFromFamily),
           nutritionApi.getMealTemplates(patientIdFromFamily),
         ]);
 
-        setTodaysMeals(mealsResponse.data.meals);
+        const meals = mealsResponse.data.meals || mealsResponse.data.mealLogs || [];
+        const filteredMeals = meals.filter((meal: any) => {
+          const ts = new Date(meal.consumedAt || meal.createdAt);
+          return ts >= startDate && ts <= endDate;
+        });
+
+        setTodaysMeals(filteredMeals);
         setWeeklySummary(summaryResponse.data.summary);
         setTemplates(templatesResponse.data.templates);
       }
@@ -182,15 +190,15 @@ export function Nutrition() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-800">{error}</p>
+      <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+        <p className="text-red-800 dark:text-red-400">{error}</p>
       </div>
     );
   }
@@ -200,12 +208,12 @@ export function Nutrition() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nutrition</h1>
-          <p className="text-gray-600 mt-1">Track meals and monitor nutrition</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Nutrition</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Track meals and monitor nutrition</p>
         </div>
         <button
           onClick={() => setShowLogMealModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <Plus className="w-5 h-5 mr-2" />
           Log Meal
@@ -215,55 +223,55 @@ export function Nutrition() {
       {/* Weekly Summary Cards */}
       {weeklySummary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Meals This Week</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{weeklySummary.totalMeals}</p>
-                <p className="text-xs text-gray-500 mt-1">{weeklySummary.daysWithMeals}/7 days</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Meals This Week</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{weeklySummary.totalMeals}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{weeklySummary.daysWithMeals}/7 days</p>
               </div>
-              <Utensils className="w-8 h-8 text-blue-600" />
+              <Utensils className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Avg Calories/Meal</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Avg Calories/Meal</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
                   {weeklySummary.averageCalories ? Math.round(weeklySummary.averageCalories) : '—'}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Past 7 days</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Past 7 days</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-green-600" />
+              <TrendingUp className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Guideline Adherence</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Guideline Adherence</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
                   {weeklySummary.guidelineAdherence !== null
                     ? `${weeklySummary.guidelineAdherence}%`
                     : '—'}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Meals meeting goals</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Meals meeting goals</p>
               </div>
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Concerns</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{weeklySummary.totalConcerns}</p>
-                <p className="text-xs text-gray-500 mt-1">Items flagged</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Concerns</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{weeklySummary.totalConcerns}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Items flagged</p>
               </div>
               <AlertCircle className={cn(
                 "w-8 h-8",
-                weeklySummary.totalConcerns > 0 ? "text-yellow-600" : "text-gray-400"
+                weeklySummary.totalConcerns > 0 ? "text-yellow-600 dark:text-yellow-400" : "text-gray-400 dark:text-gray-500"
               )} />
             </div>
           </div>
@@ -271,25 +279,25 @@ export function Nutrition() {
       )}
 
       {/* Today's Meals */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
+              <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Today's Meals - {format(new Date(), 'MMMM d, yyyy')}
               </h2>
             </div>
-            <span className="text-sm text-gray-600">{todaysMeals.length} logged</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{todaysMeals.length} logged</span>
           </div>
         </div>
 
         <div className="p-6">
           {todaysMeals.length === 0 ? (
             <div className="text-center py-12">
-              <Utensils className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">No meals logged today</p>
-              <p className="text-sm text-gray-500 mt-1">Click "Log Meal" to track a meal</p>
+              <Utensils className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">No meals logged today</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Click "Log Meal" to track a meal</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -297,7 +305,7 @@ export function Nutrition() {
                 <div
                   key={meal.id}
                   onClick={() => handleMealClick(meal)}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors cursor-pointer"
+                  className="border border-gray-200 dark:border-slate-600 rounded-lg p-4 hover:border-gray-300 dark:hover:border-slate-500 transition-colors cursor-pointer"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -308,12 +316,12 @@ export function Nutrition() {
                         )}>
                           {MEAL_TYPE_LABELS[meal.mealType]}
                         </span>
-                        <span className="text-sm text-gray-600 flex items-center">
+                        <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
                           <Clock className="w-4 h-4 mr-1" />
                           {format(new Date(meal.consumedAt), 'h:mm a')}
                         </span>
                         {meal.template && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
                             Template: {meal.template.name}
                           </span>
                         )}
@@ -322,7 +330,7 @@ export function Nutrition() {
                       {/* Food Items */}
                       {meal.nutritionData?.foodItems && meal.nutritionData.foodItems.length > 0 && (
                         <div className="mb-2">
-                          <p className="text-sm text-gray-900 font-medium">
+                          <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
                             {meal.nutritionData.foodItems.slice(0, 5).join(', ')}
                             {meal.nutritionData.foodItems.length > 5 && `, +${meal.nutritionData.foodItems.length - 5} more`}
                           </p>
@@ -331,7 +339,7 @@ export function Nutrition() {
 
                       {/* Nutrition Info */}
                       {meal.nutritionData && (
-                        <div className="flex flex-wrap gap-3 text-xs text-gray-600 mb-2">
+                        <div className="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
                           {meal.nutritionData.estimatedCalories && (
                             <span>~{meal.nutritionData.estimatedCalories} cal</span>
                           )}
@@ -352,11 +360,11 @@ export function Nutrition() {
                               key={idx}
                               src={url}
                               alt={`Meal photo ${idx + 1}`}
-                              className="w-16 h-16 object-cover rounded border border-gray-200"
+                              className="w-16 h-16 object-cover rounded border border-gray-200 dark:border-slate-600"
                             />
                           ))}
                           {meal.photoUrls.length > 3 && (
-                            <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-xs text-gray-600">
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700 rounded border border-gray-200 dark:border-slate-600 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
                               +{meal.photoUrls.length - 3}
                             </div>
                           )}
@@ -365,11 +373,11 @@ export function Nutrition() {
 
                       {/* Concerns */}
                       {meal.concerns && meal.concerns.length > 0 && (
-                        <div className="flex items-start space-x-2 p-2 bg-yellow-50 border border-yellow-200 rounded mt-2">
-                          <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex items-start space-x-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded mt-2">
+                          <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
                           <div className="flex-1">
-                            <p className="text-xs font-medium text-yellow-900">Concerns:</p>
-                            <p className="text-xs text-yellow-800">{meal.concerns.join('; ')}</p>
+                            <p className="text-xs font-medium text-yellow-900 dark:text-yellow-400">Concerns:</p>
+                            <p className="text-xs text-yellow-800 dark:text-yellow-300">{meal.concerns.join('; ')}</p>
                           </div>
                         </div>
                       )}
@@ -379,13 +387,13 @@ export function Nutrition() {
                         <div className="flex items-center space-x-2 mt-2">
                           {meal.meetsGuidelines ? (
                             <>
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                              <span className="text-xs text-green-700">Meets nutrition guidelines</span>
+                              <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                              <span className="text-xs text-green-700 dark:text-green-400">Meets nutrition guidelines</span>
                             </>
                           ) : (
                             <>
-                              <Info className="w-4 h-4 text-blue-600" />
-                              <span className="text-xs text-blue-700">May need adjustment to meet guidelines</span>
+                              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              <span className="text-xs text-blue-700 dark:text-blue-400">May need adjustment to meet guidelines</span>
                             </>
                           )}
                         </div>
@@ -393,17 +401,17 @@ export function Nutrition() {
 
                       {/* Notes */}
                       {meal.notes && (
-                        <p className="text-sm text-gray-600 mt-2 italic">"{meal.notes}"</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">"{meal.notes}"</p>
                       )}
 
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                         Logged by {meal.loggedBy.firstName} {meal.loggedBy.lastName}
                       </p>
                     </div>
 
                     <button
                       onClick={() => handleDeleteMeal(meal.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors ml-4"
+                      className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors ml-4"
                       title="Delete meal log"
                     >
                       <XCircle className="w-5 h-5" />
@@ -418,10 +426,10 @@ export function Nutrition() {
 
       {/* Meal Templates */}
       {templates.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Quick Log Templates</h2>
-            <p className="text-sm text-gray-600 mt-1">Common meals for faster logging</p>
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quick Log Templates</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Common meals for faster logging</p>
           </div>
 
           <div className="p-6">
@@ -433,7 +441,7 @@ export function Nutrition() {
                     // TODO: Quick log with template
                     toast('Quick logging with template coming soon!');
                   }}
-                  className="text-left border border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 transition-all"
+                  className="text-left border border-gray-200 dark:border-slate-600 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 dark:hover:border-blue-500 dark:hover:bg-blue-900/20 transition-all"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -443,19 +451,19 @@ export function Nutrition() {
                       )}>
                         {MEAL_TYPE_LABELS[template.mealType]}
                       </span>
-                      <h3 className="font-medium text-gray-900">{template.name}</h3>
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100">{template.name}</h3>
                       {template.nutritionData?.foodItems && (
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           {template.nutritionData.foodItems.slice(0, 3).join(', ')}
                         </p>
                       )}
                       {template.nutritionData?.estimatedCalories && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           ~{template.nutritionData.estimatedCalories} cal
                         </p>
                       )}
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   </div>
                 </button>
               ))}

@@ -55,15 +55,15 @@ export function Family() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      <div className="flex items-center justify-center p-8 dark:bg-slate-900">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600 dark:text-primary-400" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+      <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl text-red-700 dark:text-red-300">
         {error}
       </div>
     );
@@ -71,7 +71,7 @@ export function Family() {
 
   if (!familyData) {
     return (
-      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700">
+      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl text-yellow-700 dark:text-yellow-300">
         No family found. Please complete onboarding first.
       </div>
     );
@@ -85,25 +85,25 @@ export function Family() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{familyData.name}</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{familyData.name}</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Managing care coordination for your family
         </p>
       </div>
 
       {/* Care Recipient Card */}
-      <div className="card">
+      <div className="card dark:bg-slate-800 dark:border-slate-700">
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <Heart className="h-8 w-8 text-primary-600" />
+          <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+            <Heart className="h-8 w-8 text-primary-600 dark:text-primary-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Caring for</h2>
-            <p className="text-2xl font-bold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Caring for</h2>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {familyData.patient.firstName} {familyData.patient.lastName}
             </p>
-            <p className="text-sm text-gray-600 mt-1">
-              {patientAge} years old • {familyData.patient.gender === 'male' ? 'Male' : familyData.patient.gender === 'female' ? 'Female' : 'Other'}
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+              {patientAge} years old - {familyData.patient.gender === 'male' ? 'Male' : familyData.patient.gender === 'female' ? 'Female' : 'Other'}
             </p>
           </div>
         </div>

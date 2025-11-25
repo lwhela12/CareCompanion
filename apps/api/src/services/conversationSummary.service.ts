@@ -1,0 +1,221 @@
+import Anthropic from '@anthropic-ai/sdk';
+import { prisma } from '@carecompanion/database';
+import { config } from '../config';
+import { logger } from '../utils/logger';
+import { userSettingsService } from './userSettings.service';
+
+export interface ConversationSummaryResult {
+  summary: string;
+  topics: string[];
+  sentiment: 'positive' | 'neutral' | 'concerned';
+  actionsCount: number;
+}
+
+export interface LogToJournalResult {
+  success: boolean;
+  journalEntryId?: string;
+  message: string;
+}
+
+class ConversationSummaryService {
+  private client: Anthropic | null = null;
+
+  private getClient(): Anthropic {
+    if (!this.client) {
+      if (!config.anthropicApiKey) {
+        throw new Error('Anthropic API key not configured');
+      }
+      this.client = new Anthropic({ apiKey: config.anthropicApiKey });
+    }
+    return this.client;
+  }
+
+  /**
+   * Generate a summary of a conversation using AI
+   */
+  async summarizeConversation(conversationId: string): Promise<ConversationSummaryResult | null> {
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    if (!conversation || conversation.messages.length === 0) {
+      return null;
+    }
+
+    // Format messages for summarization
+    const messageText = conversation.messages
+      .map((m) => `${m.role === 'USER' ? 'User' : 'CeeCee'}: ${m.content}`)
+      .join('\n\n');
+
+    try {
+      const client = this.getClient();
+      const response = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: `You are a helpful assistant that summarizes caregiving conversations. Create a concise summary that:
+1. Captures the main topics discussed
+2. Notes any actions taken (medications logged, tasks created, etc.)
+3. Highlights any concerns or important information
+
+Respond in JSON format:
+{
+  "summary": "Brief 2-3 sentence summary of the conversation",
+  "topics": ["topic1", "topic2"],
+  "sentiment": "positive" | "neutral" | "concerned",
+  "actionsCount": number
+}`,
+        messages: [
+          {
+            role: 'user',
+            content: `Please summarize this CeeCee conversation:\n\n${messageText}`,
+          },
+        ],
+      });
+
+      const content = response.content[0];
+      if (content.type === 'text') {
+        const result = JSON.parse(content.text);
+        return {
+          summary: result.summary,
+          topics: result.topics || [],
+          sentiment: result.sentiment || 'neutral',
+          actionsCount: result.actionsCount || 0,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      logger.error('Failed to summarize conversation', {
+        conversationId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Log a conversation to the journal
+   */
+  async logToJournal(
+    conversationId: string,
+    userId: string,
+    familyId: string
+  ): Promise<LogToJournalResult> {
+    try {
+      // Check if already logged
+      const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: {
+          messages: { take: 1 },
+        },
+      });
+
+      if (!conversation) {
+        return { success: false, message: 'Conversation not found' };
+      }
+
+      if (conversation.loggedToJournalAt) {
+        return { success: false, message: 'Conversation already logged to journal' };
+      }
+
+      if (conversation.messages.length === 0) {
+        return { success: false, message: 'Conversation has no messages to log' };
+      }
+
+      // Check user preferences
+      const prefs = await userSettingsService.getUserPreferences(userId);
+      if (!prefs.ceeceeAutoLogEnabled) {
+        return { success: false, message: 'Auto-logging is disabled in user settings' };
+      }
+
+      // Generate summary
+      const summaryResult = await this.summarizeConversation(conversationId);
+      if (!summaryResult) {
+        return { success: false, message: 'Failed to generate conversation summary' };
+      }
+
+      // Create journal entry with visibility settings
+      const visibleToUserIds = prefs.ceeceeLogVisibleTo.length > 0
+        ? [...prefs.ceeceeLogVisibleTo, userId] // Include author
+        : [userId]; // Private to author
+
+      const journalEntry = await prisma.journalEntry.create({
+        data: {
+          familyId,
+          userId,
+          content: `**CeeCee Conversation Summary**\n\n${summaryResult.summary}\n\n**Topics:** ${summaryResult.topics.join(', ') || 'General discussion'}`,
+          sentiment: summaryResult.sentiment,
+          isPrivate: true, // Start as private, visibility controlled by visibleToUserIds
+          visibleToUserIds,
+          autoGenerated: true,
+          conversationId,
+          attachmentUrls: [],
+        },
+      });
+
+      // Mark conversation as logged
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { loggedToJournalAt: new Date() },
+      });
+
+      logger.info('Conversation logged to journal', {
+        conversationId,
+        journalEntryId: journalEntry.id,
+        userId,
+        familyId,
+      });
+
+      return {
+        success: true,
+        journalEntryId: journalEntry.id,
+        message: 'Conversation logged to journal successfully',
+      };
+    } catch (error) {
+      logger.error('Failed to log conversation to journal', {
+        conversationId,
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Log all unlogged conversations for a user (for EOD job)
+   */
+  async logUnloggedConversations(userId: string, familyId: string): Promise<number> {
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        userId,
+        familyId,
+        loggedToJournalAt: null,
+        messages: { some: {} }, // Has at least one message
+        updatedAt: {
+          // Only conversations from today
+          gte: new Date(new Date().setHours(0, 0, 0, 0)),
+        },
+      },
+    });
+
+    let loggedCount = 0;
+    for (const conv of conversations) {
+      const result = await this.logToJournal(conv.id, userId, familyId);
+      if (result.success) {
+        loggedCount++;
+      }
+    }
+
+    return loggedCount;
+  }
+}
+
+export const conversationSummaryService = new ConversationSummaryService();

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { X, Loader2, Plus, Minus, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, dateInputToLocalISOString, formatLocalDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { recommendationsApi } from '@/lib/api';
 import { parseMedicationFromRecommendation } from '@/lib/parseMedicationFromRecommendation';
@@ -41,7 +41,7 @@ export function RecommendationAcceptModal({
     frequency: parsedMedicationData?.frequency || recommendation.frequency || 'twice daily',
     scheduleTimes: parsedMedicationData?.scheduleTimes || ['08:00', '20:00'],
     instructions: parsedMedicationData?.instructions || '',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: formatLocalDate(),
     endDate: '',
     currentSupply: '',
     refillThreshold: '7',
@@ -116,8 +116,8 @@ export function RecommendationAcceptModal({
             frequency: medicationData.frequency,
             scheduleTimes: medicationData.scheduleTimes,
             instructions: medicationData.instructions,
-            startDate: new Date(medicationData.startDate).toISOString(),
-            endDate: medicationData.endDate ? new Date(medicationData.endDate).toISOString() : undefined,
+            startDate: dateInputToLocalISOString(medicationData.startDate),
+            endDate: medicationData.endDate ? dateInputToLocalISOString(medicationData.endDate) : undefined,
             currentSupply: medicationData.currentSupply ? parseInt(medicationData.currentSupply) : undefined,
             refillThreshold: parseInt(medicationData.refillThreshold),
           },
@@ -142,8 +142,8 @@ export function RecommendationAcceptModal({
       } else if (['FOLLOWUP', 'TESTS', 'MONITORING'].includes(recommendation.type)) {
         acceptanceData = {
           careTaskData: {
-            dueDate: careTaskData.dueDate ? new Date(careTaskData.dueDate).toISOString() : undefined,
-            reminderDate: careTaskData.reminderDate ? new Date(careTaskData.reminderDate).toISOString() : undefined,
+            dueDate: careTaskData.dueDate ? dateInputToLocalISOString(careTaskData.dueDate) : undefined,
+            reminderDate: careTaskData.reminderDate ? dateInputToLocalISOString(careTaskData.reminderDate) : undefined,
             priority: careTaskData.priority,
           },
         };

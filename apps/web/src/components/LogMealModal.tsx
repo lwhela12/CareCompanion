@@ -11,7 +11,7 @@ import {
   Trash2,
   Sparkles,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatLocalDateTime, toLocalISOString } from '@/lib/utils';
 import { nutritionApi } from '@/lib/api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -50,7 +50,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
 
   const [formData, setFormData] = useState({
     mealType: 'LUNCH',
-    consumedAt: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:MM format
+    consumedAt: formatLocalDateTime(), // YYYY-MM-DDTHH:MM format in local time
     notes: '',
     templateId: '',
     analyzeWithAI: true,
@@ -188,7 +188,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
       const mealData = {
         patientId,
         mealType: formData.mealType,
-        consumedAt: new Date(formData.consumedAt).toISOString(),
+        consumedAt: toLocalISOString(new Date(formData.consumedAt)),
         notes: formData.notes || undefined,
         photoUrls: uploadedPhotos,
         templateId: formData.templateId || undefined,

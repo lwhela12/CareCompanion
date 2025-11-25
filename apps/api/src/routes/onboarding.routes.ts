@@ -43,6 +43,7 @@ const chatSchema = z.object({
       description: z.string().optional(),
       dueDate: z.string().optional(),
       scheduledTime: z.string().optional(),
+      dayOfWeek: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']).optional(),
       recurrenceType: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'once']).optional(),
       priority: z.enum(['high', 'medium', 'low']).optional(),
     })).optional().default([]),
@@ -79,6 +80,7 @@ const confirmSchema = z.object({
       description: z.string().optional(),
       dueDate: z.string().optional(),
       scheduledTime: z.string().optional(),
+      dayOfWeek: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']).optional(),
       recurrenceType: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'once']).optional(),
       priority: z.enum(['high', 'medium', 'low']).optional(),
     })).optional().default([]),
@@ -339,9 +341,10 @@ router.post('/confirm', async (req: Request, res: Response) => {
         (task, index, self) =>
           index === self.findIndex((t) => t.title.toLowerCase() === task.title.toLowerCase())
       );
+
       const careTasks = await Promise.all(
         uniqueCareTasks.map((task) => {
-          // Convert recurrence type to rule
+          // Convert recurrence type to rule, including BYDAY for weekly tasks
           let recurrenceRule: string | undefined;
           if (task.recurrenceType && task.recurrenceType !== 'once') {
             const ruleMap: Record<string, string> = {
@@ -351,6 +354,15 @@ router.post('/confirm', async (req: Request, res: Response) => {
               monthly: 'FREQ=MONTHLY',
             };
             recurrenceRule = ruleMap[task.recurrenceType];
+
+            // Add BYDAY for weekly tasks if dayOfWeek is specified
+            if (task.dayOfWeek && (task.recurrenceType === 'weekly' || task.recurrenceType === 'biweekly')) {
+              const dayMap: Record<string, string> = {
+                sunday: 'SU', monday: 'MO', tuesday: 'TU', wednesday: 'WE',
+                thursday: 'TH', friday: 'FR', saturday: 'SA',
+              };
+              recurrenceRule += `;BYDAY=${dayMap[task.dayOfWeek]}`;
+            }
           }
 
           // Calculate due date with optional time
@@ -360,6 +372,25 @@ router.post('/confirm', async (req: Request, res: Response) => {
             if (task.scheduledTime) {
               const [hours, minutes] = task.scheduledTime.split(':').map(Number);
               dueDate.setHours(hours, minutes, 0, 0);
+            }
+          } else if (task.dayOfWeek) {
+            // Calculate next occurrence of the specified day of week
+            const dayMap: Record<string, number> = {
+              sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+              thursday: 4, friday: 5, saturday: 6,
+            };
+            const targetDay = dayMap[task.dayOfWeek];
+            dueDate = new Date();
+            const currentDay = dueDate.getDay();
+            const daysUntilTarget = (targetDay - currentDay + 7) % 7;
+            // If today is the target day, use today (daysUntilTarget = 0)
+            dueDate.setDate(dueDate.getDate() + daysUntilTarget);
+
+            if (task.scheduledTime) {
+              const [hours, minutes] = task.scheduledTime.split(':').map(Number);
+              dueDate.setHours(hours, minutes, 0, 0);
+            } else {
+              dueDate.setHours(9, 0, 0, 0); // Default to 9 AM
             }
           } else if (task.scheduledTime) {
             dueDate = new Date();

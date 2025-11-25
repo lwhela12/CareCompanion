@@ -26,6 +26,10 @@ export interface NotificationPreferences {
   smsEnabled: boolean;
   phoneNumber: string | null;
   pushEnabled: boolean;
+
+  // CeeCee conversation logging
+  ceeceeAutoLogEnabled: boolean; // Auto-log conversations to journal
+  ceeceeLogVisibleTo: string[]; // Array of userIds who can see logs (empty = private to author)
 }
 
 /**
@@ -47,6 +51,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   smsEnabled: false,
   phoneNumber: null,
   pushEnabled: false,
+  ceeceeAutoLogEnabled: true, // Auto-log conversations by default
+  ceeceeLogVisibleTo: [], // Private to author by default
 };
 
 /**

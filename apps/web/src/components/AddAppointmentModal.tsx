@@ -3,6 +3,7 @@ import { X, Calendar, Clock, MapPin, User, FileText, UserCheck } from 'lucide-re
 import { format } from 'date-fns';
 import { useAuth } from '@clerk/clerk-react';
 import { api } from '../lib/api';
+import { dateInputToLocalISOString, toLocalISOString } from '@/lib/utils';
 
 interface AddAppointmentModalProps {
   isOpen: boolean;
@@ -77,28 +78,24 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
       const appointmentDate = new Date(formData.date);
       appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      // Get emoji and priority based on appointment type
-      const getEmoji = () => {
-        switch (formData.appointmentType) {
-          case 'medical': return '🏥';
-          case 'therapy': return '🧠';
-          case 'lab': return '🔬';
-          case 'social': return '👥';
-          case 'family': return '👨‍👩‍👧‍👦';
-          default: return '📅';
-        }
-      };
-
       const getPriority = () => {
         return ['medical', 'therapy', 'lab'].includes(formData.appointmentType) ? 'high' : 'medium';
       };
 
+      // Build description without emoji (taskType field handles appointment distinction now)
+      const descriptionParts = [];
+      if (formData.provider) descriptionParts.push(`with ${formData.provider}`);
+      if (formData.location) descriptionParts.push(`Location: ${formData.location}`);
+      if (formData.description) descriptionParts.push(formData.description);
+      const description = descriptionParts.join('\n');
+
       // Prepare the request body
       const requestBody: any = {
         title: formData.title,
-        description: `${getEmoji()} ${formData.provider ? `with ${formData.provider}` : ''}\n${formData.location ? `📍 ${formData.location}` : ''}\n${formData.description}`,
-        dueDate: appointmentDate.toISOString(),
+        description: description || undefined,
+        dueDate: toLocalISOString(appointmentDate),
         priority: getPriority(),
+        taskType: 'appointment', // Explicitly mark as appointment
         assignedToId: formData.assignedToId || undefined,
       };
 
@@ -108,7 +105,7 @@ export function AddAppointmentModal({ isOpen, onClose, onAppointmentAdded, defau
         requestBody.recurrenceType = formData.recurrenceType;
         // Only include end date if provided
         if (formData.recurrenceEndDate) {
-          requestBody.recurrenceEndDate = new Date(formData.recurrenceEndDate).toISOString();
+          requestBody.recurrenceEndDate = dateInputToLocalISOString(formData.recurrenceEndDate);
         }
       }
 

@@ -3,6 +3,7 @@ import { X, Calendar, Clock, MapPin, User, FileText, UserCheck, AlertCircle } fr
 import { format } from 'date-fns';
 import { useAuth } from '@clerk/clerk-react';
 import { api } from '../lib/api';
+import { toLocalISOString } from '@/lib/utils';
 
 interface EditAppointmentModalProps {
   isOpen: boolean;
@@ -137,8 +138,6 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
       }
       
       // Combine date and time properly to avoid timezone issues
-      const [hours, minutes] = formData.time.split(':');
-      // Create date string in ISO format to ensure correct date
       const dateTimeString = `${formData.date}T${formData.time}:00`;
       const appointmentDate = new Date(dateTimeString);
 
@@ -162,7 +161,7 @@ export function EditAppointmentModal({ isOpen, onClose, onAppointmentUpdated, ta
       const updateData: any = {
         title: formData.title,
         description: `${getEmoji()} ${formData.provider ? `with ${formData.provider}` : ''}\n${formData.location ? `📍 ${formData.location}` : ''}\n${formData.description}`,
-        dueDate: appointmentDate.toISOString(),
+        dueDate: toLocalISOString(appointmentDate),
         priority: getPriority(),
       };
 

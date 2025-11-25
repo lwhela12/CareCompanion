@@ -33,35 +33,35 @@ model Family {
 }
 
 model User {
-  id                     String                 @id @default(uuid())
-  clerkId                String                 @unique @map("clerk_id")
-  email                  String                 @unique
-  firstName              String                 @map("first_name")
-  lastName               String                 @map("last_name")
-  userType               UserType               @default(CAREGIVER) @map("user_type")
-  linkedPatientId        String?                @unique @map("linked_patient_id")
-  createdAt              DateTime               @default(now()) @map("created_at")
-  lastActive             DateTime?              @map("last_active")
-  notificationPreferences Json?                 @map("notification_preferences")
-  auditLogs              AuditLog[]
-  auditLogsImpersonated  AuditLog[]             @relation("ImpersonatedBy")
-  careTaskLogs           CareTaskLog[]
-  careTasksAssigned      CareTask[]             @relation("AssignedTo")
-  careTasksCreated       CareTask[]             @relation("CreatedBy")
-  checklistItemsCreated  PatientChecklistItem[]
-  checklistLogsCompleted PatientChecklistLog[]
-  documentsUploaded      Document[]
-  familyMembers          FamilyMember[]
-  acknowledgedInsights   Insight[]
-  invitationsSent        Invitation[]           @relation("InvitedBy")
-  itemLocationsCreated   ItemLocation[]         @relation("CreatedBy")
-  journalEntries         JournalEntry[]
-  medicationLogsGiven    MedicationLog[]
-  medicationsCreated     Medication[]           @relation("CreatedBy")
-  mealLogsCreated        MealLog[]              @relation("MealLogsCreated")
-  mealTemplatesCreated   MealTemplate[]         @relation("MealTemplatesCreated")
-  calendarConnections    CalendarConnection[]
-  linkedPatient          Patient?               @relation("PatientUser", fields: [linkedPatientId], references: [id])
+  id                      String                 @id @default(uuid())
+  clerkId                 String                 @unique @map("clerk_id")
+  email                   String                 @unique
+  firstName               String                 @map("first_name")
+  lastName                String                 @map("last_name")
+  userType                UserType               @default(CAREGIVER) @map("user_type")
+  linkedPatientId         String?                @unique @map("linked_patient_id")
+  createdAt               DateTime               @default(now()) @map("created_at")
+  lastActive              DateTime?              @map("last_active")
+  notificationPreferences Json?                  @map("notification_preferences")
+  auditLogs               AuditLog[]
+  auditLogsImpersonated   AuditLog[]             @relation("ImpersonatedBy")
+  careTaskLogs            CareTaskLog[]
+  careTasksAssigned       CareTask[]             @relation("AssignedTo")
+  careTasksCreated        CareTask[]             @relation("CreatedBy")
+  checklistItemsCreated   PatientChecklistItem[]
+  checklistLogsCompleted  PatientChecklistLog[]
+  documentsUploaded       Document[]
+  familyMembers           FamilyMember[]
+  acknowledgedInsights    Insight[]
+  invitationsSent         Invitation[]           @relation("InvitedBy")
+  itemLocationsCreated    ItemLocation[]         @relation("CreatedBy")
+  journalEntries          JournalEntry[]
+  medicationLogsGiven     MedicationLog[]
+  medicationsCreated      Medication[]           @relation("CreatedBy")
+  mealLogsCreated         MealLog[]              @relation("MealLogsCreated")
+  mealTemplatesCreated    MealTemplate[]         @relation("MealTemplatesCreated")
+  calendarConnections     CalendarConnection[]
+  linkedPatient           Patient?               @relation("PatientUser", fields: [linkedPatientId], references: [id])
 
   @@index([email])
   @@map("users")
@@ -182,6 +182,7 @@ model Recommendation {
   linkedChecklistItemId String?                  @map("linked_checklist_item_id")
   acknowledgedBy        String?                  @map("acknowledged_by")
   acknowledgedAt        DateTime?                @map("acknowledged_at")
+  completedAt           DateTime?                @map("completed_at")
   dismissedReason       String?                  @map("dismissed_reason")
   createdAt             DateTime                 @default(now()) @map("created_at")
   updatedAt             DateTime                 @updatedAt @map("updated_at")
@@ -208,12 +209,14 @@ model JournalEntry {
   content          String
   sentiment        JournalSentiment?
   isPrivate        Boolean           @default(false) @map("is_private")
+  visibleToUserIds String[]          @map("visible_to_user_ids") // Granular visibility - if set, only these users can see
   attachmentUrls   String[]          @map("attachment_urls")
   analysisData     Json?             @map("analysis_data")
   sourceDocumentId String?           @map("source_document_id")
   visitDate        DateTime?         @map("visit_date")
   providerId       String?           @map("provider_id")
   autoGenerated    Boolean           @default(false) @map("auto_generated")
+  conversationId   String?           @map("conversation_id") // Link to source conversation if CeeCee-generated
   family           Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user             User              @relation(fields: [userId], references: [id])
   provider         Provider?         @relation(fields: [providerId], references: [id])
@@ -287,6 +290,7 @@ model CareTask {
   createdById          String           @map("created_by_id")
   priority             CareTaskPriority @default(MEDIUM)
   status               CareTaskStatus   @default(PENDING)
+  taskType             CareTaskType     @default(TASK) @map("task_type") // Distinguishes tasks from appointments
   recurrenceRule       String?          @map("recurrence_rule") // Stores recurrence pattern
   recurrenceEndDate    DateTime?        @map("recurrence_end_date")
   parentTaskId         String?          @map("parent_task_id") // Links instances to their recurrence template
@@ -472,6 +476,11 @@ enum CareTaskStatus {
   IN_PROGRESS @map("in_progress")
   COMPLETED   @map("completed")
   CANCELLED   @map("cancelled")
+}
+
+enum CareTaskType {
+  TASK        @map("task")
+  APPOINTMENT @map("appointment")
 }
 
 enum MedicationStatus {
@@ -770,13 +779,14 @@ model CalendarSyncLog {
 // --- AI Chat Conversations ---
 
 model Conversation {
-  id        String        @id @default(uuid())
-  familyId  String        @map("family_id")
-  userId    String        @map("user_id")
-  title     String?       // Auto-generated from first message or user-set
-  createdAt DateTime      @default(now()) @map("created_at")
-  updatedAt DateTime      @updatedAt @map("updated_at")
-  messages  ChatMessage[]
+  id                String        @id @default(uuid())
+  familyId          String        @map("family_id")
+  userId            String        @map("user_id")
+  title             String? // Auto-generated from first message or user-set
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  loggedToJournalAt DateTime?     @map("logged_to_journal_at") // When this conversation was logged to journal
+  messages          ChatMessage[]
 
   @@index([familyId, updatedAt(sort: Desc)])
   @@index([userId])
@@ -788,7 +798,8 @@ model ChatMessage {
   conversationId String       @map("conversation_id")
   role           MessageRole
   content        String
-  citations      Json?        // Stores citation references used in this message
+  citations      Json? // Stores citation references used in this message
+  attachments    Json? // Stores file attachments [{type: 'image'|'document', url: string, mimeType: string, name: string}]
   tokenCount     Int?         @map("token_count")
   createdAt      DateTime     @default(now()) @map("created_at")
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

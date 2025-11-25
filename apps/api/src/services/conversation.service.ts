@@ -13,6 +13,7 @@ export interface AddMessageParams {
   content: string;
   citations?: any;
   tokenCount?: number;
+  attachments?: any;
 }
 
 export interface GetConversationsParams {
@@ -98,7 +99,7 @@ class ConversationService {
    * Add a message to a conversation
    */
   async addMessage(params: AddMessageParams) {
-    const { conversationId, role, content, citations, tokenCount } = params;
+    const { conversationId, role, content, citations, tokenCount, attachments } = params;
 
     // Add the message
     const message = await prisma.chatMessage.create({
@@ -107,6 +108,7 @@ class ConversationService {
         role,
         content,
         citations: citations || null,
+        attachments: attachments || null,
         tokenCount: tokenCount || null,
       },
     });

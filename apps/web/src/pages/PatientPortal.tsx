@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { Check, Circle, Pill, Utensils, Dumbbell, Droplet, Users, Activity, Loader2, Plus, Edit2, Trash2, X, LogOut } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { cn } from '@/lib/utils';
+import { cn, localDayBounds } from '@/lib/utils';
 import { api } from '@/lib/api';
-import { useClerk } from '@clerk/clerk-react';
-import { useNavigate } from 'react-router-dom';
+import { useLogout } from '@/hooks/useLogout';
 
 interface ChecklistItem {
   id: string;
@@ -67,8 +66,7 @@ const getCategoryColor = (category: string) => {
 };
 
 export function PatientPortal() {
-  const { signOut } = useClerk();
-  const navigate = useNavigate();
+  const { handleLogout, isLoggingOut } = useLogout();
   const [medications, setMedications] = useState<ChecklistItem[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,8 +107,28 @@ export function PatientPortal() {
 
       // Get today's checklist
       const response = await api.get(`/api/v1/patients/${patientIdFromFamily}/checklist/today`);
-      setMedications(response.data.medications || []);
-      setChecklist(response.data.checklist || []);
+      const { startDate, endDate } = localDayBounds();
+
+      const filteredMeds = Array.isArray(response.data.medications)
+        ? response.data.medications.filter((med: any) => {
+            if (!med.scheduledTime) return true;
+            const ts = new Date(med.scheduledTime);
+            return ts >= startDate && ts <= endDate;
+          })
+        : [];
+
+      const filteredChecklist = Array.isArray(response.data.checklist)
+        ? response.data.checklist.filter((item: any) => {
+            if (item.scheduledTime) {
+              const ts = new Date(item.scheduledTime);
+              return ts >= startDate && ts <= endDate;
+            }
+            return true;
+          })
+        : [];
+
+      setMedications(filteredMeds);
+      setChecklist(filteredChecklist);
     } catch (error: any) {
       console.error('Error fetching checklist:', error);
       toast.error('Failed to load checklist');
@@ -343,42 +361,44 @@ export function PatientPortal() {
         {/* This will show when a caregiver is logged in as patient */}
 
         {/* Header */}
-        <div className="text-center mb-8 relative">
-          {/* Logout / Exit */}
-          <div className="absolute top-0 left-0 flex items-center gap-2">
+        <div className="text-center mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <button
-              onClick={async () => {
-                try {
-                  await signOut();
-                  navigate('/sign-in');
-                } catch (e) {
-                  // As a fallback, just navigate to sign-in
-                  navigate('/sign-in');
-                }
-              }}
-              className="p-3 rounded-2xl bg-white/80 hover:bg-white shadow border border-gray-200 flex items-center gap-2"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="p-3 rounded-2xl bg-white/80 hover:bg-white shadow border border-gray-200 flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50"
               title="Sign out"
             >
-              <LogOut className="h-5 w-5 text-gray-700" />
-              <span className="hidden sm:inline text-sm font-medium text-gray-700">Sign out</span>
+              {isLoggingOut ? (
+                <>
+                  <Loader2 className="h-5 w-5 text-gray-700 animate-spin" />
+                  <span className="text-sm font-medium text-gray-700">Signing out...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut className="h-5 w-5 text-gray-700" />
+                  <span className="text-sm font-medium text-gray-700">Sign out</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                setIsCreating(true);
+                setFormData({ title: '', description: '', category: 'OTHER', time: '' });
+              }}
+              className="p-3 sm:p-4 rounded-2xl bg-primary-600 hover:bg-primary-700 transition-colors shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto"
+              title="Add New Task"
+            >
+              <Plus className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+              <span className="text-white font-semibold">Add item</span>
             </button>
           </div>
 
-          <button
-            onClick={() => {
-              setIsCreating(true);
-              setFormData({ title: '', description: '', category: 'OTHER', time: '' });
-            }}
-            className="absolute top-0 right-0 p-4 rounded-2xl bg-primary-600 hover:bg-primary-700 transition-colors shadow-lg"
-            title="Add New Task"
-          >
-            <Plus className="h-8 w-8 text-white" />
-          </button>
-
-          <h1 className="text-5xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
             {greeting}, {patientName}!
           </h1>
-          <p className="text-2xl text-gray-600">
+          <p className="text-lg sm:text-2xl text-gray-600">
             {format(new Date(), 'EEEE, MMMM d')}
           </p>
 
@@ -410,9 +430,9 @@ export function PatientPortal() {
               'p-4 rounded-2xl border-4 mb-4',
               group.colorClass
             )}>
-              <h2 className="text-3xl font-bold text-gray-900 flex items-center justify-between">
-                <span>{group.title}</span>
-                <span className="text-xl font-semibold text-gray-600">{group.subtitle}</span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <span className="leading-tight">{group.title}</span>
+                <span className="text-lg sm:text-xl font-semibold text-gray-600">{group.subtitle}</span>
               </h2>
             </div>
             <div className="space-y-3">
@@ -471,7 +491,7 @@ export function PatientPortal() {
                       disabled={item.completed}
                       className="w-full text-left"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
                         <div className={cn(
                           'w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0',
                           item.completed
@@ -492,11 +512,11 @@ export function PatientPortal() {
                           )}
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <span className="text-2xl font-bold text-gray-900">{item.title}</span>
+                          <div className="flex items-center gap-3 mb-1 flex-wrap">
+                            <span className="text-xl sm:text-2xl font-bold text-gray-900">{item.title}</span>
                             {item.time && (
                               <span className={cn(
-                                'text-xl font-bold px-3 py-1 rounded-lg',
+                                'text-lg sm:text-xl font-bold px-3 py-1 rounded-lg',
                                 isUrgent ? 'bg-red-200 text-red-900' : 'bg-gray-200 text-gray-700'
                               )}>
                                 {item.time}
@@ -504,7 +524,7 @@ export function PatientPortal() {
                             )}
                           </div>
                           {item.description && (
-                            <p className="text-lg text-gray-600">{item.description}</p>
+                            <p className="text-base sm:text-lg text-gray-600">{item.description}</p>
                           )}
                           {item.type === 'medication' && (
                             <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 text-sm font-semibold rounded-lg">

@@ -3,7 +3,9 @@ import { prisma } from '@carecompanion/database';
 import { buildFactsHeader } from '../services/factsHeader.service';
 import { aiRateLimiter } from '../middleware/rateLimit';
 import { conversationService } from '../services/conversation.service';
-import { chatAIService } from '../services/chatAI.service';
+import { chatAIService, ChatAttachment } from '../services/chatAI.service';
+import { chatAttachmentDocumentService, ChatAttachmentDocumentResult } from '../services/chatAttachmentDocument.service';
+import { s3Service } from '../services/s3.service';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -148,11 +150,26 @@ router.post('/chat', aiRateLimiter, async (req, res) => {
 
   try {
     // Input
-    const { query, conversationId, timezone } = req.body || {};
+    const { query, conversationId, timezone, attachments } = req.body || {};
     if (!query || typeof query !== 'string' || !query.trim()) {
       sse({ type: 'error', message: 'Missing query' });
       res.end();
       return;
+    }
+
+    // Validate attachments if provided
+    const validatedAttachments: ChatAttachment[] = [];
+    if (attachments && Array.isArray(attachments)) {
+      for (const att of attachments) {
+        if (att.type && att.url && att.mimeType) {
+          validatedAttachments.push({
+            type: att.type as 'image' | 'document',
+            url: att.url,
+            mimeType: att.mimeType,
+            name: att.name || 'attachment',
+          });
+        }
+      }
     }
 
     // Resolve family from auth
@@ -206,12 +223,60 @@ router.post('/chat', aiRateLimiter, async (req, res) => {
       }
     }
 
-    // Save user message to conversation
+    // Save user message to conversation (with attachments if any)
     await conversationService.addMessage({
       conversationId: activeConversationId,
       role: 'USER',
       content: query,
+      attachments: validatedAttachments.length > 0 ? validatedAttachments : undefined,
     });
+
+    // Process attachments and create Document records (async, non-blocking for chat)
+    // We'll notify the user via SSE about saved documents
+    const documentResults: ChatAttachmentDocumentResult[] = [];
+    if (validatedAttachments.length > 0) {
+      sse({ type: 'status', status: 'processing_attachments' });
+
+      for (const att of validatedAttachments) {
+        try {
+          const docResult = await chatAttachmentDocumentService.createAndParseDocument({
+            familyId,
+            userId: user.id,
+            attachmentUrl: att.url,
+            attachmentName: att.name,
+            mimeType: att.mimeType,
+          });
+          documentResults.push(docResult);
+
+          // Notify frontend about saved document
+          sse({
+            type: 'document_saved',
+            documentId: docResult.documentId,
+            title: docResult.title,
+            documentType: docResult.type,
+            parsingStatus: docResult.parsingStatus,
+            processingResult: docResult.processingResult,
+          });
+
+          logger.info('Chat attachment saved as document', {
+            documentId: docResult.documentId,
+            type: docResult.type,
+            parsingStatus: docResult.parsingStatus,
+          });
+        } catch (docErr: any) {
+          logger.error('Failed to save chat attachment as document', {
+            attachmentUrl: att.url,
+            error: docErr.message,
+          });
+          // Don't fail the chat - just log the error
+          sse({
+            type: 'document_error',
+            attachmentName: att.name,
+            error: 'Failed to save document',
+          });
+        }
+      }
+    }
 
     // Build enhanced context
     sse({ type: 'status', status: 'building_context' });
@@ -245,7 +310,7 @@ router.post('/chat', aiRateLimiter, async (req, res) => {
     // Stream response from Claude with tool support
     let fullResponse = '';
     let deltaCount = 0;
-    for await (const event of chatAIService.chat(messages, chatContext, contextText)) {
+    for await (const event of chatAIService.chat(messages, chatContext, contextText, validatedAttachments)) {
       switch (event.type) {
         case 'text':
           deltaCount++;
@@ -286,6 +351,83 @@ router.post('/chat', aiRateLimiter, async (req, res) => {
     logger.error('AI chat error', { error: e.message, stack: e.stack });
     sse({ type: 'error', message: e?.message || 'Chat failed' });
     res.end();
+  }
+});
+
+// Get presigned URL for chat file upload
+router.post('/chat/upload', async (req, res) => {
+  try {
+    const auth: any = (req as any).auth;
+    if (!auth?.userId) {
+      res.status(401).json({ error: { message: 'Unauthorized' } });
+      return;
+    }
+
+    const { fileName, fileType, fileSize } = req.body;
+
+    if (!fileName || !fileType) {
+      res.status(400).json({ error: { message: 'Missing fileName or fileType' } });
+      return;
+    }
+
+    // Validate file type - allow images, text documents, and PDFs
+    // Note: HEIC is converted to JPEG on the frontend before upload
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'text/plain',
+      'text/markdown',
+    ];
+
+    if (!allowedTypes.includes(fileType)) {
+      res.status(400).json({
+        error: { message: `File type ${fileType} not allowed. Allowed: ${allowedTypes.join(', ')}` },
+      });
+      return;
+    }
+
+    // Max file size: 10MB
+    const maxSize = 10 * 1024 * 1024;
+    if (fileSize && fileSize > maxSize) {
+      res.status(400).json({ error: { message: 'File size exceeds 10MB limit' } });
+      return;
+    }
+
+    // Get user's family
+    const user = await prisma.user.findUnique({
+      where: { clerkId: auth.userId },
+      include: { familyMembers: { where: { isActive: true } } },
+    });
+
+    if (!user || user.familyMembers.length === 0) {
+      res.status(404).json({ error: { message: 'No family found' } });
+      return;
+    }
+
+    const familyId = user.familyMembers[0].familyId;
+
+    // Generate presigned URL for chat attachments
+    const { url, key } = await s3Service.getPresignedUploadUrl(
+      `${familyId}/chat`,
+      fileName,
+      fileType
+    );
+
+    // Generate the public URL that will be used after upload
+    const publicUrl = s3Service.getPublicUrl(key);
+
+    res.json({
+      uploadUrl: url,
+      key,
+      publicUrl,
+      expiresIn: 3600,
+    });
+  } catch (error: any) {
+    logger.error('Chat upload URL error', { error: error.message });
+    res.status(500).json({ error: { message: 'Failed to generate upload URL' } });
   }
 });
 

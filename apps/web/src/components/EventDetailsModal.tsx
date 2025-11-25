@@ -1,4 +1,4 @@
-import { X, Calendar, Clock, MapPin, User, Pill, FileText, Users, Edit } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, User, Pill, FileText, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@clerk/clerk-react';
 import { api } from '../lib/api';
@@ -22,7 +22,6 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
 
   const eventType = event.extendedProps?.type || 'task';
   const isAppointment = eventType === 'appointment' || (eventType === 'task' && event.color === '#9333EA');
-  const isSocialVisit = event.extendedProps?.description?.includes('👥');
   const isMedication = eventType === 'medication';
 
   const handleEdit = async () => {
@@ -131,21 +130,18 @@ export function EventDetailsModal({ isOpen, onClose, event, onEventUpdated }: Ev
 
   const getIcon = () => {
     if (isMedication) return <Pill className="h-5 w-5" />;
-    if (isSocialVisit) return <Users className="h-5 w-5" />;
     if (isAppointment) return <Calendar className="h-5 w-5" />;
     return <FileText className="h-5 w-5" />;
   };
 
   const getEventTypeLabel = () => {
     if (isMedication) return 'Medication';
-    if (isSocialVisit) return 'Social Visit';
     if (isAppointment) return 'Appointment';
     return 'Task';
   };
 
   const getEventColor = () => {
     if (isMedication) return 'bg-blue-100 text-blue-700';
-    if (isSocialVisit) return 'bg-green-100 text-green-700';
     if (isAppointment) return 'bg-purple-100 text-purple-700';
     return 'bg-gray-100 text-gray-700';
   };

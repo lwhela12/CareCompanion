@@ -13,7 +13,8 @@ import {
   User,
   ChevronRight,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, toLocalISOString, startEndOfLocalDay } from '@/lib/utils';
+import { cacheDashboardData } from '@/lib/dashboardCache';
 import { CeeCeeAvatar } from '@/components/CeeCeeAvatar';
 import { CeeCeeName } from '@/components/CeeCeeName';
 
@@ -91,7 +92,6 @@ export function OnboardingChat() {
   });
   const [showSummary, setShowSummary] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [shouldAutoConfirm, setShouldAutoConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -105,13 +105,15 @@ export function OnboardingChat() {
 
   // Auto-confirm handler (doesn't require button click)
   const handleConfirmAuto = useCallback(async () => {
-    if (!collectedData.patient || isConfirming || isTransitioning) return;
+    if (!collectedData.patient || isConfirming) return;
 
     setIsConfirming(true);
     setError(null);
 
     try {
       const token = await getToken();
+
+      // 1. Confirm onboarding (creates family/patient)
       const response = await fetch(`${API_URL}/api/v1/onboarding/confirm`, {
         method: 'POST',
         headers: {
@@ -126,7 +128,35 @@ export function OnboardingChat() {
         throw new Error(data.error || 'Failed to complete setup');
       }
 
-      // Store full conversation history for the chat widget
+      // 2. Pre-fetch dashboard data while user sees final message
+      const { start, end } = startEndOfLocalDay(new Date());
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [familyRes, tasksRes] = await Promise.all([
+        fetch(`${API_URL}/api/v1/families`, { headers }),
+        fetch(`${API_URL}/api/v1/care-tasks?startDate=${toLocalISOString(start)}&endDate=${toLocalISOString(end)}&includeVirtual=true`, { headers }),
+      ]);
+
+      const familyData = await familyRes.json();
+      const tasksData = await tasksRes.json();
+
+      // Fetch medications if we have a patient
+      let medicationsData: { medications?: any[]; logs?: any[] } = { medications: [], logs: [] };
+      if (familyData.families?.[0]?.patient?.id) {
+        const patientId = familyData.families[0].patient.id;
+        const medsRes = await fetch(`${API_URL}/api/v1/patients/${patientId}/medications/today`, { headers });
+        medicationsData = await medsRes.json();
+      }
+
+      // 3. Cache the data for dashboard to pick up
+      cacheDashboardData({
+        familyData,
+        todaysMedications: medicationsData.medications || [],
+        todayTasks: tasksData.tasks || [],
+        recommendations: [],
+      });
+
+      // 4. Store conversation history for the chat widget
       const conversationHistory = messages.map(m => ({
         role: m.role,
         content: m.content,
@@ -137,9 +167,18 @@ export function OnboardingChat() {
         localStorage.setItem('ceecee_user_name', collectedData.userName);
       }
 
-      // Navigate immediately - dashboard will handle the transition
+      // 5. Start transition - trigger app-level overlay and navigate
       setIsConfirming(false);
+
+      // Dispatch event to show the app-level transition overlay
+      window.dispatchEvent(new Event('start-dashboard-transition'));
+
+      // Small delay to ensure overlay is painted before navigation
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Navigate (happens under the overlay, invisible to user)
       navigate('/dashboard?welcome=true');
+
     } catch (err: any) {
       setError(err.message || 'Failed to complete setup');
       setIsConfirming(false);
@@ -361,34 +400,22 @@ export function OnboardingChat() {
   };
 
   return (
-    <>
-      {/* Transition overlay */}
-      {isTransitioning && (
-        <div className="fixed inset-0 bg-gradient-to-br from-primary-50 to-white z-40 animate-fade-in" />
-      )}
-
-      <div
-        ref={containerRef}
-        className={cn(
-          "min-h-screen bg-gradient-to-br from-primary-50 to-white flex flex-col transition-all duration-700 ease-in-out",
-          isTransitioning && "fixed z-50 animate-shrink-to-corner"
-        )}
-        style={isTransitioning ? {
-          transformOrigin: 'bottom right',
-        } : undefined}
-      >
+    <div
+      ref={containerRef}
+      className="min-h-screen bg-gradient-to-br from-primary-50 to-white dark:from-slate-900 dark:to-slate-800 flex flex-col"
+    >
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <CeeCeeAvatar size="lg" />
           <div>
             <h1><CeeCeeName size="lg" /></h1>
-            <p className="text-sm text-gray-500">Your care companion</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Your care companion</p>
           </div>
         </div>
         <button
           onClick={handleSkip}
-          className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center gap-1"
+          className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm font-medium flex items-center gap-1"
         >
           Skip & Explore
           <ChevronRight className="h-4 w-4" />
@@ -418,16 +445,16 @@ export function OnboardingChat() {
                     'max-w-[75%] rounded-2xl px-4 py-3',
                     message.role === 'user'
                       ? 'bg-primary-600 text-white'
-                      : 'bg-white shadow-sm border border-gray-100'
+                      : 'bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 dark:text-gray-100'
                   )}
                 >
                   {message.content ? (
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   ) : message.isStreaming ? (
                     <div className="flex gap-1 py-1">
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   ) : null}
                 </div>
@@ -437,9 +464,9 @@ export function OnboardingChat() {
           </div>
 
           {/* Input area */}
-          <div className="border-t border-gray-200 bg-white p-4">
+          <div className="border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
             {error && (
-              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+              <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center gap-2">
                 <X className="h-4 w-4 flex-shrink-0" />
                 {error}
               </div>
@@ -453,7 +480,7 @@ export function OnboardingChat() {
                 placeholder="Type your message..."
                 disabled={isLoading}
                 rows={1}
-                className="flex-1 resize-none rounded-xl border-2 border-gray-200 px-4 py-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 disabled:opacity-50 disabled:bg-gray-50"
+                className="flex-1 resize-none rounded-xl border-2 border-gray-200 dark:border-slate-600 px-4 py-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-800 disabled:opacity-50 disabled:bg-gray-50 dark:disabled:bg-slate-700 bg-white dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400"
               />
               <button
                 onClick={() => sendMessage()}
@@ -462,7 +489,7 @@ export function OnboardingChat() {
                   'px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-2',
                   input.trim() && !isLoading
                     ? 'bg-primary-600 text-white hover:bg-primary-700'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                 )}
               >
                 {isLoading ? (
@@ -476,28 +503,28 @@ export function OnboardingChat() {
         </div>
 
         {/* Sidebar - Collected data summary */}
-        <div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto hidden lg:block">
-          <h2 className="font-semibold text-gray-900 mb-4">Collected Information</h2>
+        <div className="w-80 bg-white dark:bg-slate-800 border-l border-gray-200 dark:border-slate-700 p-4 overflow-y-auto hidden lg:block">
+          <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Collected Information</h2>
 
           {/* Patient */}
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <User className="h-4 w-4" />
               Patient
               {collectedData.patient && <Check className="h-4 w-4 text-green-500 ml-auto" />}
             </div>
             {collectedData.patient ? (
-              <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                <p className="font-medium">{collectedData.patient.firstName} {collectedData.patient.lastName}</p>
+              <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+                <p className="font-medium dark:text-gray-100">{collectedData.patient.firstName} {collectedData.patient.lastName}</p>
                 {collectedData.patient.dateOfBirth && (
-                  <p className="text-gray-500">
+                  <p className="text-gray-500 dark:text-gray-400">
                     {collectedData.patient.dateOfBirth.endsWith('-01-01')
                       ? `Age: ${new Date().getFullYear() - parseInt(collectedData.patient.dateOfBirth.slice(0, 4))}`
                       : `DOB: ${collectedData.patient.dateOfBirth}`
                     }
                   </p>
                 )}
-                <p className="text-gray-500 capitalize">{collectedData.patient.relationship}</p>
+                <p className="text-gray-500 dark:text-gray-400 capitalize">{collectedData.patient.relationship}</p>
               </div>
             ) : (
               <p className="text-sm text-gray-400">Not yet provided</p>
@@ -506,16 +533,16 @@ export function OnboardingChat() {
 
           {/* Medications */}
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Pill className="h-4 w-4" />
               Medications ({itemCount.medications})
             </div>
             {collectedData.medications.length > 0 ? (
               <div className="space-y-2">
                 {collectedData.medications.map((med, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3 text-sm">
-                    <p className="font-medium">{med.name}</p>
-                    <p className="text-gray-500">{med.dosage} - {med.frequency}</p>
+                  <div key={i} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+                    <p className="font-medium dark:text-gray-100">{med.name}</p>
+                    <p className="text-gray-500 dark:text-gray-400">{med.dosage} - {med.frequency}</p>
                   </div>
                 ))}
               </div>
@@ -526,17 +553,17 @@ export function OnboardingChat() {
 
           {/* Care Tasks */}
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Calendar className="h-4 w-4" />
               Care Tasks ({itemCount.tasks})
             </div>
             {collectedData.careTasks.length > 0 ? (
               <div className="space-y-2">
                 {collectedData.careTasks.map((task, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3 text-sm">
-                    <p className="font-medium">{task.title}</p>
+                  <div key={i} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+                    <p className="font-medium dark:text-gray-100">{task.title}</p>
                     {task.recurrenceType && (
-                      <p className="text-gray-500 capitalize">{task.recurrenceType}</p>
+                      <p className="text-gray-500 dark:text-gray-400 capitalize">{task.recurrenceType}</p>
                     )}
                   </div>
                 ))}
@@ -548,16 +575,16 @@ export function OnboardingChat() {
 
           {/* Family Members */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Users className="h-4 w-4" />
               Family Members ({itemCount.family})
             </div>
             {collectedData.familyMembers.length > 0 ? (
               <div className="space-y-2">
                 {collectedData.familyMembers.map((member, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3 text-sm">
-                    <p className="font-medium">{member.name || member.email}</p>
-                    <p className="text-gray-500 capitalize">{member.role.replace('_', ' ')}</p>
+                  <div key={i} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+                    <p className="font-medium dark:text-gray-100">{member.name || member.email}</p>
+                    <p className="text-gray-500 dark:text-gray-400 capitalize">{member.role.replace('_', ' ')}</p>
                   </div>
                 ))}
               </div>
@@ -591,11 +618,11 @@ export function OnboardingChat() {
 
       {/* Mobile summary modal */}
       {showSummary && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 lg:hidden">
-          <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50 lg:hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Review Your Information</h2>
-              <button onClick={() => setShowSummary(false)} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-xl font-semibold dark:text-gray-100">Review Your Information</h2>
+              <button onClick={() => setShowSummary(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="h-6 w-6" />
               </button>
             </div>
@@ -603,20 +630,20 @@ export function OnboardingChat() {
             {/* Patient */}
             {collectedData.patient && (
               <div className="mb-4">
-                <h3 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                   <User className="h-4 w-4" /> Patient
                 </h3>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="font-medium">{collectedData.patient.firstName} {collectedData.patient.lastName}</p>
+                <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
+                  <p className="font-medium dark:text-gray-100">{collectedData.patient.firstName} {collectedData.patient.lastName}</p>
                   {collectedData.patient.dateOfBirth && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {collectedData.patient.dateOfBirth.endsWith('-01-01')
                         ? `Age: ${new Date().getFullYear() - parseInt(collectedData.patient.dateOfBirth.slice(0, 4))}`
                         : `DOB: ${collectedData.patient.dateOfBirth}`
                       }
                     </p>
                   )}
-                  <p className="text-sm text-gray-500 capitalize">{collectedData.patient.relationship}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{collectedData.patient.relationship}</p>
                 </div>
               </div>
             )}
@@ -624,14 +651,14 @@ export function OnboardingChat() {
             {/* Medications */}
             {collectedData.medications.length > 0 && (
               <div className="mb-4">
-                <h3 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                   <Pill className="h-4 w-4" /> Medications
                 </h3>
                 <div className="space-y-2">
                   {collectedData.medications.map((med, i) => (
-                    <div key={i} className="bg-gray-50 rounded-lg p-3">
-                      <p className="font-medium">{med.name}</p>
-                      <p className="text-sm text-gray-500">{med.dosage} - {med.frequency}</p>
+                    <div key={i} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
+                      <p className="font-medium dark:text-gray-100">{med.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{med.dosage} - {med.frequency}</p>
                     </div>
                   ))}
                 </div>
@@ -642,7 +669,7 @@ export function OnboardingChat() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowSummary(false)}
-                className="flex-1 py-3 px-4 border-2 border-gray-200 rounded-xl font-medium hover:bg-gray-50"
+                className="flex-1 py-3 px-4 border-2 border-gray-200 dark:border-slate-600 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-slate-700 dark:text-gray-100"
               >
                 Continue Chatting
               </button>
@@ -664,8 +691,7 @@ export function OnboardingChat() {
           </div>
         </div>
       )}
-      </div>
-    </>
+    </div>
   );
 }
 

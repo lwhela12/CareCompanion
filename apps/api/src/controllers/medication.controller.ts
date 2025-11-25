@@ -27,7 +27,7 @@ const createMedicationSchema = z.object({
 const updateMedicationSchema = createMedicationSchema.partial();
 
 const logMedicationSchema = z.object({
-  scheduledTime: z.string().datetime(),
+  scheduledTime: z.string().datetime({ offset: true }),
   status: z.enum(['given', 'missed', 'refused']),
   notes: z.string().max(500).optional(),
 });

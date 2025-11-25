@@ -280,13 +280,13 @@ export function Journal() {
   const getSentimentColor = (sentiment?: string) => {
     switch (sentiment) {
       case 'positive':
-        return 'text-green-600 bg-green-50';
+        return 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30';
       case 'concerned':
-        return 'text-yellow-600 bg-yellow-50';
+        return 'text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/30';
       case 'urgent':
-        return 'text-red-600 bg-red-50';
+        return 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30';
       default:
-        return 'text-gray-600 bg-gray-50';
+        return 'text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-slate-700';
     }
   };
 
@@ -311,7 +311,7 @@ export function Journal() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600 dark:text-primary-400" />
       </div>
     );
   }
@@ -321,8 +321,8 @@ export function Journal() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Care Journal</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Care Journal</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Track daily observations and care notes
           </p>
         </div>
@@ -350,7 +350,7 @@ export function Journal() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-2">
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
           {error}
         </div>
@@ -359,28 +359,28 @@ export function Journal() {
       {/* Insights Summary */}
       {insights && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="card">
+          <div className="card dark:bg-slate-800 dark:border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">Total Entries</span>
-              <BookOpen className="h-5 w-5 text-gray-400" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Total Entries</span>
+              <BookOpen className="h-5 w-5 text-gray-400 dark:text-gray-500" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{insights.totalEntries}</p>
-            <p className="text-xs text-gray-500">Last 7 days</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{insights.totalEntries}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Last 7 days</p>
           </div>
-          
-          <div className="card">
+
+          <div className="card dark:bg-slate-800 dark:border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">Daily Average</span>
-              <Calendar className="h-5 w-5 text-gray-400" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Daily Average</span>
+              <Calendar className="h-5 w-5 text-gray-400 dark:text-gray-500" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{insights.averageEntriesPerDay}</p>
-            <p className="text-xs text-gray-500">Entries per day</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{insights.averageEntriesPerDay}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Entries per day</p>
           </div>
-          
-          <div className="card">
+
+          <div className="card dark:bg-slate-800 dark:border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">Mood Trend</span>
-              <TrendingUp className="h-5 w-5 text-gray-400" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Mood Trend</span>
+              <TrendingUp className="h-5 w-5 text-gray-400 dark:text-gray-500" />
             </div>
             <div className="flex gap-2">
               {Object.entries(insights.sentimentDistribution).map(([sentiment, count]) => (
@@ -390,23 +390,23 @@ export function Journal() {
               ))}
             </div>
           </div>
-          
-          <div className="card">
+
+          <div className="card dark:bg-slate-800 dark:border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">Concerns</span>
-              <AlertCircle className="h-5 w-5 text-gray-400" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Concerns</span>
+              <AlertCircle className="h-5 w-5 text-gray-400 dark:text-gray-500" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{insights.recentConcerns.length}</p>
-            <p className="text-xs text-gray-500">Needs attention</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{insights.recentConcerns.length}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Needs attention</p>
           </div>
         </div>
       )}
 
       {/* New/Edit Entry Form */}
       {(showNewEntry || editingEntry) && (
-        <div className="card">
+        <div className="card dark:bg-slate-800 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {editingEntry ? 'Edit Entry' : 'New Journal Entry'}
             </h2>
             <button
@@ -416,7 +416,7 @@ export function Journal() {
                 setNewEntryContent('');
                 setIsPrivate(false);
               }}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
               <X className="h-5 w-5" />
             </button>
@@ -427,7 +427,7 @@ export function Journal() {
               <textarea
                 value={newEntryContent}
                 onChange={(e) => setNewEntryContent(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
                 rows={5}
                 placeholder="What happened today? How is the patient doing?"
                 autoFocus
@@ -439,11 +439,11 @@ export function Journal() {
                     disabled={recordingStatus === 'transcribing'}
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors relative",
-                      recordingStatus === 'recording' 
-                        ? "bg-red-100 text-red-700 hover:bg-red-200"
+                      recordingStatus === 'recording'
+                        ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
                         : recordingStatus === 'transcribing'
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
                     )}
                   >
                     {recordingStatus === 'recording' ? (
@@ -468,20 +468,20 @@ export function Journal() {
                   {isRecording && isPaused && (
                     <button
                       onClick={resumeRecording}
-                      className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg transition-colors"
                       title="Resume recording"
                     >
-                      <Play className="h-4 w-4" />
+                      <Play className="h-4 w-4 dark:text-gray-300" />
                     </button>
                   )}
-                  
+
                   {isRecording && !isPaused && (
                     <button
                       onClick={pauseRecording}
-                      className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg transition-colors"
                       title="Pause recording"
                     >
-                      <Pause className="h-4 w-4" />
+                      <Pause className="h-4 w-4 dark:text-gray-300" />
                     </button>
                   )}
                   
@@ -490,8 +490,8 @@ export function Journal() {
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
                       isPrivate
-                        ? "bg-primary-100 text-primary-700"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
                     )}
                   >
                     {isPrivate ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
@@ -507,7 +507,7 @@ export function Journal() {
                       setNewEntryContent('');
                       setIsPrivate(false);
                     }}
-                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-700 rounded-lg transition-colors"
                   >
                     Cancel
                   </button>
@@ -529,20 +529,20 @@ export function Journal() {
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search entries..."
-            className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        
+
         <select
           value={filterDays}
           onChange={(e) => setFilterDays(Number(e.target.value))}
-          className="px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          className="px-4 py-2 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         >
           <option value={7}>Last 7 days</option>
           <option value={30}>Last 30 days</option>
@@ -554,28 +554,28 @@ export function Journal() {
       {/* Journal Entries */}
       <div className="space-y-4">
         {filteredEntries.length === 0 ? (
-          <div className="card text-center py-12">
-            <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No journal entries found</p>
-            <p className="text-sm text-gray-400 mt-1">
+          <div className="card dark:bg-slate-800 dark:border-slate-700 text-center py-12">
+            <BookOpen className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">No journal entries found</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
               {searchQuery ? 'Try adjusting your search' : 'Start by creating your first entry'}
             </p>
           </div>
         ) : (
           filteredEntries.map((entry) => (
-            <div key={entry.id} className="card hover:shadow-md transition-shadow">
+            <div key={entry.id} className="card dark:bg-slate-800 dark:border-slate-700 hover:shadow-md dark:hover:shadow-slate-900/50 transition-shadow">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     {entry.autoGenerated ? (
                       <CeeCeeName />
                     ) : (
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
                         {entry.user.firstName} {entry.user.lastName}
                       </span>
                     )}
                     {entry.isPrivate && (
-                      <Lock className="h-4 w-4 text-gray-400" />
+                      <Lock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     )}
                   </div>
                   {entry.sentiment && (
@@ -597,22 +597,22 @@ export function Journal() {
                       setIsPrivate(entry.isPrivate);
                       setShowNewEntry(false);
                     }}
-                    className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                    className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:text-gray-400 dark:hover:text-primary-400 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
                   >
                     <Edit2 className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteEntry(entry.id)}
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:text-gray-400 dark:hover:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
-              
-              <p className="text-gray-700 whitespace-pre-wrap mb-3">{entry.content}</p>
-              
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+
+              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mb-3">{entry.content}</p>
+
+              <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                 <time dateTime={entry.createdAt}>
                   {format(new Date(entry.createdAt), 'MMM d, yyyy • h:mm a')}
                 </time>

@@ -190,22 +190,22 @@ export function QuickEntry({ onClose, onSave, patientName = 'the patient' }: Qui
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
       <div className={cn(
-        "bg-white rounded-2xl shadow-xl w-full max-w-2xl transition-all",
+        "bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl transition-all",
         recordingStatus === 'recording' && "ring-4 ring-red-500 ring-opacity-50"
       )}>
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-semibold text-gray-900">Quick Entry</h3>
-              <p className="text-sm text-gray-500 mt-1">Jot down a quick note about {patientName}</p>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Quick Entry</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Jot down a quick note about {patientName}</p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
-              <X className="h-5 w-5 text-gray-500" />
+              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
         </div>
@@ -215,14 +215,14 @@ export function QuickEntry({ onClose, onSave, patientName = 'the patient' }: Qui
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
             rows={6}
             placeholder="What's happening right now? Any observations, concerns, or updates?"
             autoFocus
           />
-          
+
           {error && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm flex items-center gap-2">
               <AlertCircle className="h-4 w-4" />
               {error}
             </div>
@@ -235,11 +235,11 @@ export function QuickEntry({ onClose, onSave, patientName = 'the patient' }: Qui
                 disabled={recordingStatus === 'transcribing'}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors relative",
-                  recordingStatus === 'recording' 
-                    ? "bg-red-100 text-red-700 hover:bg-red-200"
+                  recordingStatus === 'recording'
+                    ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400 dark:hover:bg-red-900/60"
                     : recordingStatus === 'transcribing'
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
                 )}
               >
                 {recordingStatus === 'recording' ? (
@@ -260,45 +260,45 @@ export function QuickEntry({ onClose, onSave, patientName = 'the patient' }: Qui
                   </>
                 )}
               </button>
-              
+
               {isRecording && isPaused && (
                 <button
                   onClick={resumeRecording}
-                  className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg transition-colors"
                   title="Resume recording"
                 >
-                  <Play className="h-4 w-4" />
+                  <Play className="h-4 w-4 dark:text-gray-300" />
                 </button>
               )}
-              
+
               {isRecording && !isPaused && (
                 <button
                   onClick={pauseRecording}
-                  className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg transition-colors"
                   title="Pause recording"
                 >
-                  <Pause className="h-4 w-4" />
+                  <Pause className="h-4 w-4 dark:text-gray-300" />
                 </button>
               )}
-              
+
               <button
                 onClick={() => setIsPrivate(!isPrivate)}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
                   isPrivate
-                    ? "bg-primary-100 text-primary-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-400"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
                 )}
               >
                 {isPrivate ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                 {isPrivate ? 'Private' : 'Shared'}
               </button>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -312,8 +312,8 @@ export function QuickEntry({ onClose, onSave, patientName = 'the patient' }: Qui
               </button>
             </div>
           </div>
-          
-          <p className="text-xs text-gray-500 mt-3">
+
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
             Tip: Press {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Enter to save quickly
           </p>
         </div>

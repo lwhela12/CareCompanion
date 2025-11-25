@@ -70,10 +70,10 @@ const tabs = [
 ];
 
 const priorityColors = {
-  URGENT: 'bg-red-100 text-red-800 border-red-300',
-  HIGH: 'bg-orange-100 text-orange-800 border-orange-300',
-  MEDIUM: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  LOW: 'bg-gray-100 text-gray-800 border-gray-300',
+  URGENT: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border-red-300 dark:border-red-700',
+  HIGH: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-700',
+  MEDIUM: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
+  LOW: 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-slate-600',
 };
 
 const typeLabels: Record<string, string> = {
@@ -166,18 +166,18 @@ export function Recommendations() {
   }, {} as Record<string, any>);
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Recommendations</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Recommendations</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
             Review and manage recommendations from healthcare providers
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-gray-200">
+        <div className="mb-6 border-b border-gray-200 dark:border-slate-700">
           <nav className="-mb-px flex space-x-8 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -191,14 +191,14 @@ export function Recommendations() {
                   className={cn(
                     'flex items-center whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors',
                     isActive
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      ? 'border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-slate-500 hover:text-gray-700 dark:hover:text-gray-200'
                   )}
                 >
                   <Icon className="mr-2 h-5 w-5" />
                   {tab.label}
                   {isActive && count > 0 && (
-                    <span className="ml-2 rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-600">
+                    <span className="ml-2 rounded-full bg-indigo-100 dark:bg-indigo-900/50 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-300">
                       {count}
                     </span>
                   )}
@@ -211,23 +211,23 @@ export function Recommendations() {
         {/* Content */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400" />
           </div>
         ) : error ? (
-          <div className="rounded-lg bg-red-50 p-4">
+          <div className="rounded-lg bg-red-50 dark:bg-red-900/30 p-4">
             <div className="flex">
               <AlertTriangle className="h-5 w-5 text-red-400" />
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error loading recommendations</h3>
-                <p className="mt-1 text-sm text-red-700">{error}</p>
+                <h3 className="text-sm font-medium text-red-800 dark:text-red-300">Error loading recommendations</h3>
+                <p className="mt-1 text-sm text-red-700 dark:text-red-400">{error}</p>
               </div>
             </div>
           </div>
         ) : Object.keys(groupedRecommendations).length === 0 ? (
-          <div className="rounded-lg bg-white p-12 text-center shadow-sm">
-            <FileText className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No recommendations</h3>
-            <p className="mt-2 text-sm text-gray-500">
+          <div className="rounded-lg bg-white dark:bg-slate-800 p-12 text-center shadow-sm">
+            <FileText className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+            <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">No recommendations</h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               {activeTab === 'PENDING'
                 ? 'Upload medical documents to get personalized recommendations from your healthcare providers.'
                 : `No ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()} recommendations.`}
@@ -236,17 +236,17 @@ export function Recommendations() {
         ) : (
           <div className="space-y-6">
             {Object.values(groupedRecommendations).map((group: any, idx: number) => (
-              <div key={idx} className="rounded-lg bg-white shadow-sm">
+              <div key={idx} className="rounded-lg bg-white dark:bg-slate-800 shadow-sm">
                 {/* Group Header */}
-                <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                <div className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 px-6 py-4">
                   <div className="flex items-center justify-between">
                     <div>
                       {group.document && (
-                        <h3 className="text-sm font-medium text-gray-900">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {group.document.title}
                         </h3>
                       )}
-                      <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
+                      <div className="mt-1 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                         {group.provider && (
                           <div className="flex items-center">
                             <User className="mr-1.5 h-4 w-4" />
@@ -266,7 +266,7 @@ export function Recommendations() {
                 </div>
 
                 {/* Recommendations */}
-                <div className="divide-y divide-gray-200">
+                <div className="divide-y divide-gray-200 dark:divide-slate-700">
                   {group.recommendations.map((rec: Recommendation) => (
                     <div key={rec.id} className="px-6 py-4">
                       <div className="flex items-start justify-between">
@@ -280,25 +280,25 @@ export function Recommendations() {
                             >
                               {rec.priority}
                             </span>
-                            <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                            <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/50 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
                               {typeLabels[rec.type] || rec.type}
                             </span>
                           </div>
-                          <h4 className="mt-2 text-base font-medium text-gray-900">{rec.title}</h4>
-                          <p className="mt-1 text-sm text-gray-600">{rec.description}</p>
+                          <h4 className="mt-2 text-base font-medium text-gray-900 dark:text-gray-100">{rec.title}</h4>
+                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{rec.description}</p>
 
                           {/* Details */}
-                          <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                          <div className="mt-2 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                             {rec.frequency && <span>Frequency: {rec.frequency}</span>}
                             {rec.duration && <span>Duration: {rec.duration}</span>}
                           </div>
 
                           {/* Linked entity */}
                           {(rec.linkedMedication || rec.linkedCareTask || rec.linkedChecklistItem) && (
-                            <div className="mt-3 rounded-md bg-green-50 p-3">
+                            <div className="mt-3 rounded-md bg-green-50 dark:bg-green-900/30 p-3">
                               <div className="flex items-center">
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <span className="ml-2 text-sm text-green-800">
+                                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                <span className="ml-2 text-sm text-green-800 dark:text-green-300">
                                   {rec.linkedMedication && `Added to medications: ${rec.linkedMedication.name}`}
                                   {rec.linkedCareTask && `Added to tasks: ${rec.linkedCareTask.title}`}
                                   {rec.linkedChecklistItem && `Added to checklist: ${rec.linkedChecklistItem.title}`}
@@ -313,21 +313,21 @@ export function Recommendations() {
                           <div className="ml-4 flex flex-col gap-2">
                             <button
                               onClick={() => handleAccept(rec)}
-                              className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+                              className="inline-flex items-center rounded-md bg-indigo-600 dark:bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-600"
                             >
                               <Check className="mr-1.5 h-4 w-4" />
                               Accept
                             </button>
                             <button
                               onClick={() => handleAcknowledge(rec.id)}
-                              className="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                              className="inline-flex items-center rounded-md bg-white dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600"
                             >
                               <Eye className="mr-1.5 h-4 w-4" />
                               Review Later
                             </button>
                             <button
                               onClick={() => handleDismiss(rec.id)}
-                              className="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-sm font-medium text-red-700 ring-1 ring-inset ring-red-300 hover:bg-red-50"
+                              className="inline-flex items-center rounded-md bg-white dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
                             >
                               <XIcon className="mr-1.5 h-4 w-4" />
                               Dismiss
@@ -338,14 +338,14 @@ export function Recommendations() {
                           <div className="ml-4 flex flex-col gap-2">
                             <button
                               onClick={() => handleAccept(rec)}
-                              className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+                              className="inline-flex items-center rounded-md bg-indigo-600 dark:bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-600"
                             >
                               <Check className="mr-1.5 h-4 w-4" />
                               Accept
                             </button>
                             <button
                               onClick={() => handleDismiss(rec.id)}
-                              className="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-sm font-medium text-red-700 ring-1 ring-inset ring-red-300 hover:bg-red-50"
+                              className="inline-flex items-center rounded-md bg-white dark:bg-slate-700 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
                             >
                               <XIcon className="mr-1.5 h-4 w-4" />
                               Dismiss

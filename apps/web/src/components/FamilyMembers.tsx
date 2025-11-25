@@ -138,7 +138,7 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600 dark:text-primary-400" />
       </div>
     );
   }
@@ -148,8 +148,8 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Family Members</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Family Members</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             {members.length} active member{members.length !== 1 ? 's' : ''}
             {invitations.length > 0 && ` • ${invitations.length} pending invitation${invitations.length !== 1 ? 's' : ''}`}
           </p>
@@ -166,38 +166,38 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-2">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
           {error}
         </div>
       )}
 
       {/* Active Members */}
-      <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Members</h3>
+      <div className="card dark:bg-slate-800">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Active Members</h3>
         <div className="space-y-3">
           {members.map((member) => {
             const RoleIcon = roleIcons[member.role as keyof typeof roleIcons] || Users;
             return (
               <div
                 key={member.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                    <span className="text-primary-700 font-semibold">
+                  <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
+                    <span className="text-primary-700 dark:text-primary-300 font-semibold">
                       {member.firstName[0]}{member.lastName[0]}
                     </span>
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">
                       {member.firstName} {member.lastName}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
                       {member.relationship} • {member.email}
                     </div>
                     {member.joinedAt && (
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                         Joined {new Date(member.joinedAt).toLocaleDateString()}
                       </div>
                     )}
@@ -206,10 +206,10 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
                 <div className="flex items-center gap-2">
                   <div className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium',
-                    member.role === 'primary_caregiver' && 'bg-primary-100 text-primary-700',
-                    member.role === 'caregiver' && 'bg-blue-100 text-blue-700',
-                    member.role === 'family_member' && 'bg-green-100 text-green-700',
-                    member.role === 'read_only' && 'bg-gray-100 text-gray-700'
+                    member.role === 'primary_caregiver' && 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300',
+                    member.role === 'caregiver' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                    member.role === 'family_member' && 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+                    member.role === 'read_only' && 'bg-gray-100 text-gray-700 dark:bg-slate-600 dark:text-gray-300'
                   )}>
                     <RoleIcon className="h-4 w-4" />
                     {roleLabels[member.role as keyof typeof roleLabels]}
@@ -223,36 +223,36 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
 
       {/* Pending Invitations */}
       {invitations.length > 0 && (
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending Invitations</h3>
+        <div className="card dark:bg-slate-800">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Pending Invitations</h3>
           <div className="space-y-3">
             {invitations.map((invitation) => (
               <div
                 key={invitation.id}
-                className="flex items-center justify-between p-4 bg-yellow-50 rounded-xl"
+                className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <Mail className="h-6 w-6 text-yellow-700" />
+                  <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
+                    <Mail className="h-6 w-6 text-yellow-700 dark:text-yellow-400" />
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">{invitation.email}</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">{invitation.email}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
                       {invitation.relationship} • Invited by {invitation.invitedBy}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                       Expires {new Date(invitation.expiresAt).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
                     {roleLabels[invitation.role as keyof typeof roleLabels]}
                   </span>
                   {canInvite && (
                     <button
                       onClick={() => cancelInvitation(invitation.id)}
-                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-lg transition-colors"
                       title="Cancel invitation"
                     >
                       <X className="h-4 w-4" />
@@ -267,16 +267,16 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 pointer-events-none">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md pointer-events-auto">
-            <div className="p-6 border-b border-gray-200">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50 pointer-events-none">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md pointer-events-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-gray-900">Invite Family Member</h3>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Invite Family Member</h3>
                 <button
                   onClick={() => setShowInviteModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
-                  <X className="h-5 w-5 text-gray-500" />
+                  <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
             </div>
@@ -284,54 +284,54 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
             <form onSubmit={handleInvite} className="p-6 space-y-4">
               {inviteSuccess ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-success-light dark:bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Check className="h-8 w-8 text-success" />
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                     Invitation Sent!
                   </h4>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
                     An invitation has been sent to {inviteEmail}
                   </p>
                 </div>
               ) : (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Email Address
                     </label>
                     <input
                       type="email"
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="family.member@example.com"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Relationship
                     </label>
                     <input
                       type="text"
                       value={inviteRelationship}
                       onChange={(e) => setInviteRelationship(e.target.value)}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="e.g., Son, Sister, Friend"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Access Level
                     </label>
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value)}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-4 py-2 border-2 border-gray-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     >
                       <option value="caregiver">Caregiver - Can add entries and manage care</option>
                       <option value="family_member">Family Member - Can view and add updates</option>
@@ -340,7 +340,7 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
                   </div>
 
                   {inviteError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
                       {inviteError}
                     </div>
                   )}
@@ -349,7 +349,7 @@ export function FamilyMembers({ familyId, currentUserRole, members: initialMembe
                     <button
                       type="button"
                       onClick={() => setShowInviteModal(false)}
-                      className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                      className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                     >
                       Cancel
                     </button>

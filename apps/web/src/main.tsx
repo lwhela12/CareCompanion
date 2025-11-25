@@ -4,6 +4,8 @@ import { ClerkProvider } from '@clerk/clerk-react';
 import * as Sentry from '@sentry/react';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ThemeProvider } from './providers/ThemeProvider';
+import { TransitionOverlay } from './components/TransitionOverlay';
 import './styles/globals.css';
 
 // Initialize Sentry (optional - app works without it)
@@ -43,9 +45,12 @@ if (!clerkPubKey) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary fallbackType="fullPage">
-      <ClerkProvider publishableKey={clerkPubKey}>
-        <App />
-      </ClerkProvider>
+      <ThemeProvider>
+        <TransitionOverlay />
+        <ClerkProvider publishableKey={clerkPubKey}>
+          <App />
+        </ClerkProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

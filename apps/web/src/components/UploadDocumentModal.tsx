@@ -248,17 +248,17 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Upload Document</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Upload Document</h2>
           <button
             onClick={handleClose}
             disabled={isUploading}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
           >
-            <X className="h-6 w-6 text-gray-500" />
+            <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
@@ -271,17 +271,17 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
                   isDragActive
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                    : 'border-gray-300 dark:border-slate-600 hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-slate-700'
                 }`}
               >
                 <input {...getInputProps()} />
-                <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg font-semibold text-gray-900 mb-2">
+                <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {isDragActive ? 'Drop file here' : 'Drag & drop a file here'}
                 </p>
-                <p className="text-sm text-gray-500 mb-4">or click to browse</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">or click to browse</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
                   Supported files: PDF, Word, JPG, PNG (Max 10MB)
                 </p>
               </div>
@@ -289,19 +289,19 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
               {/* Camera Option */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
+                  <div className="w-full border-t border-gray-300 dark:border-slate-600"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">or</span>
+                  <span className="px-2 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400">or</span>
                 </div>
               </div>
 
               <button
                 onClick={startCamera}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-300 rounded-xl hover:border-primary-400 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               >
-                <Camera className="h-5 w-5 text-gray-600" />
-                <span className="font-medium text-gray-700">Take a Photo</span>
+                <Camera className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <span className="font-medium text-gray-700 dark:text-gray-300">Take a Photo</span>
               </button>
             </>
           ) : cameraMode ? (
@@ -328,7 +328,7 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
                 </button>
                 <button
                   onClick={stopCamera}
-                  className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-3 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
@@ -336,7 +336,7 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="border-2 border-green-200 bg-green-50 rounded-xl p-4">
+              <div className="border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 rounded-xl p-4">
                 <div className="flex items-start gap-4">
                   {selectedFile!.type.startsWith('image/') ? (
                     <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden">
@@ -347,21 +347,21 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
                       />
                     </div>
                   ) : (
-                    <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                      <File className="h-6 w-6 text-green-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+                      <File className="h-6 w-6 text-green-600 dark:text-green-400" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{selectedFile!.name}</p>
-                    <p className="text-sm text-gray-500">{formatFileSize(selectedFile!.size)}</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedFile!.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatFileSize(selectedFile!.size)}</p>
                   </div>
                   {!isUploading && (
                     <button
                       onClick={() => setSelectedFile(null)}
-                      className="p-1 hover:bg-red-100 rounded transition-colors"
+                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
                       title="Remove file"
                     >
-                      <X className="h-5 w-5 text-red-600" />
+                      <X className="h-5 w-5 text-red-600 dark:text-red-400" />
                     </button>
                   )}
                 </div>
@@ -374,7 +374,7 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
             <div className="space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Title <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -383,13 +383,13 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
                   onChange={(e) => setTitle(e.target.value)}
                   disabled={isUploading}
                   placeholder="e.g., Lab Results - June 2025"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-slate-600 disabled:cursor-not-allowed"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
                 </label>
                 <textarea
@@ -398,20 +398,20 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
                   disabled={isUploading}
                   placeholder="Optional notes about this document..."
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-slate-600 disabled:cursor-not-allowed resize-none"
                 />
               </div>
 
               {/* Document Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Document Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as DocumentType)}
                   disabled={isUploading}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-slate-600 disabled:cursor-not-allowed"
                 >
                   {DOCUMENT_TYPES.map((docType) => (
                     <option key={docType.value} value={docType.value}>
@@ -423,7 +423,7 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tags (comma-separated)
                 </label>
                 <input
@@ -432,7 +432,7 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
                   onChange={(e) => setTags(e.target.value)}
                   disabled={isUploading}
                   placeholder="e.g., cardiology, annual-checkup, 2025"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-slate-600 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -440,12 +440,12 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
               {isUploading && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">
+                    <span className="text-gray-600 dark:text-gray-300">
                       {uploadComplete ? 'Upload complete!' : 'Uploading...'}
                     </span>
-                    <span className="font-semibold text-primary-600">{uploadProgress}%</span>
+                    <span className="font-semibold text-primary-600 dark:text-primary-400">{uploadProgress}%</span>
                   </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all duration-300 ${
                         uploadComplete ? 'bg-green-500' : 'bg-primary-600'
@@ -460,11 +460,11 @@ export function UploadDocumentModal({ onClose, onUploadComplete }: UploadDocumen
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
           <button
             onClick={handleClose}
             disabled={isUploading}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>

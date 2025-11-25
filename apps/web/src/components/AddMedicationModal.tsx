@@ -8,7 +8,7 @@ import {
   Calendar,
   Pill
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, dateInputToLocalISOString, formatLocalDate } from '@/lib/utils';
 
 interface AddMedicationModalProps {
   patientId: string;
@@ -41,7 +41,7 @@ export function AddMedicationModal({ patientId, onClose, onAdd }: AddMedicationM
     scheduleTimes: ['08:00', '20:00'],
     instructions: '',
     prescribedBy: '',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: formatLocalDate(),
     endDate: '',
     currentSupply: '',
     trackSupply: false,
@@ -110,8 +110,8 @@ export function AddMedicationModal({ patientId, onClose, onAdd }: AddMedicationM
         scheduleTimes: formData.scheduleTimes.filter(t => t !== ''),
         instructions: formData.instructions || undefined,
         prescribedBy: formData.prescribedBy || undefined,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
+        startDate: dateInputToLocalISOString(formData.startDate),
+        endDate: formData.endDate ? dateInputToLocalISOString(formData.endDate) : undefined,
         currentSupply: formData.trackSupply && formData.currentSupply ? Number(formData.currentSupply) : undefined,
         refillThreshold: formData.trackSupply ? Number(formData.refillThreshold) : undefined,
       };

@@ -33,6 +33,7 @@ export interface CollectedCareTask {
   description?: string;
   dueDate?: string;
   scheduledTime?: string;
+  dayOfWeek?: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
   recurrenceType?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'once';
   priority?: 'high' | 'medium' | 'low';
 }
@@ -191,11 +192,7 @@ class OnboardingAIService {
           } else if (event.type === 'content_block_delta') {
             if (event.delta.type === 'text_delta') {
               currentText += event.delta.text;
-              // Only stream text on first loop to avoid duplication when tools are used
-              // On subsequent loops, Claude may repeat text when responding after tool execution
-              if (loopCount === 1) {
-                yield { type: 'text', content: event.delta.text };
-              }
+              yield { type: 'text', content: event.delta.text };
             } else if (event.delta.type === 'input_json_delta' && currentToolUse) {
               currentToolUse.input += event.delta.partial_json;
             }
@@ -241,10 +238,19 @@ class OnboardingAIService {
           claudeMessages.push({ role: 'assistant', content: assistantContent as Anthropic.ContentBlock[] });
 
           // Add tool results (user message with tool_result blocks)
+          // Include collected data so Claude knows what has already been collected
           const toolResults: Anthropic.ToolResultBlockParam[] = toolUses.map((tool) => ({
             type: 'tool_result' as const,
             tool_use_id: tool.id,
-            content: JSON.stringify({ success: true }),
+            content: JSON.stringify({
+              success: true,
+              collectedSoFar: {
+                patient: updatedData.patient ? `${updatedData.patient.firstName} ${updatedData.patient.lastName}` : null,
+                medications: updatedData.medications.map(m => m.name),
+                careTasks: updatedData.careTasks.map(t => t.title),
+                familyMembers: updatedData.familyMembers.map(f => f.email),
+              }
+            }),
           }));
           claudeMessages.push({ role: 'user', content: toolResults });
 
@@ -343,12 +349,14 @@ class OnboardingAIService {
 
   private handleCollectCareTask(input: CreateCareTaskInput, data: OnboardingCollectedData): void {
     // Check for duplicate by title (case-insensitive)
+    // Note: The AI should now avoid duplicates since we include collectedSoFar in tool results
     if (!data.careTasks.some(t => t.title.toLowerCase() === input.title.toLowerCase())) {
       data.careTasks.push({
         title: input.title,
         description: input.description,
         dueDate: input.dueDate,
         scheduledTime: input.scheduledTime,
+        dayOfWeek: input.dayOfWeek,
         recurrenceType: input.recurrenceType,
         priority: input.priority || 'medium',
       });

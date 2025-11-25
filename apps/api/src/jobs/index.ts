@@ -1,8 +1,9 @@
 import { Worker } from 'bullmq';
 import { logger } from '../utils/logger';
-import { medicationQueue, documentQueue, closeQueues } from './queues';
+import { medicationQueue, documentQueue, conversationLoggingQueue, closeQueues } from './queues';
 import { createMedicationReminderWorker } from './workers/medicationReminder.worker';
 import { createDocumentProcessingWorker } from './workers/documentProcessing.worker';
+import { createConversationLoggingWorker } from './workers/conversationLogging.worker';
 import { config } from '../config';
 
 // Store workers for cleanup
@@ -43,8 +44,9 @@ export async function initializeJobs() {
     // Create workers
     const medicationWorker = createMedicationReminderWorker(connection);
     const documentWorker = createDocumentProcessingWorker(connection);
+    const conversationWorker = createConversationLoggingWorker(connection);
 
-    workers = [medicationWorker, documentWorker];
+    workers = [medicationWorker, documentWorker, conversationWorker];
 
     logger.info('Job workers created', {
       workers: workers.map((w) => w.name),
@@ -64,14 +66,14 @@ export async function initializeJobs() {
 }
 
 /**
- * Set up recurring jobs (medication reminders, etc.)
+ * Set up recurring jobs (medication reminders, conversation logging, etc.)
  */
 async function setupRecurringJobs() {
   logger.info('Setting up recurring jobs...');
 
   // Remove any existing repeatable jobs with the same key
-  const existingJobs = await medicationQueue.getRepeatableJobs();
-  for (const job of existingJobs) {
+  const existingMedJobs = await medicationQueue.getRepeatableJobs();
+  for (const job of existingMedJobs) {
     if (job.key === 'medication-reminder-check') {
       await medicationQueue.removeRepeatableByKey(job.key);
       logger.info('Removed existing medication reminder job');
@@ -91,6 +93,30 @@ async function setupRecurringJobs() {
   );
 
   logger.info('Recurring medication reminder job scheduled (every 15 minutes)');
+
+  // Remove any existing conversation logging jobs
+  const existingConvJobs = await conversationLoggingQueue.getRepeatableJobs();
+  for (const job of existingConvJobs) {
+    if (job.key === 'eod-conversation-logging') {
+      await conversationLoggingQueue.removeRepeatableByKey(job.key);
+      logger.info('Removed existing conversation logging job');
+    }
+  }
+
+  // Add EOD conversation logging job - runs at 11:00 PM every day
+  // This gives users time to log out naturally before the automatic sweep
+  await conversationLoggingQueue.add(
+    'eod-log-all',
+    { type: 'eod-log-all' },
+    {
+      repeat: {
+        pattern: '0 23 * * *', // 11:00 PM daily
+      },
+      jobId: 'eod-conversation-logging',
+    }
+  );
+
+  logger.info('Recurring conversation logging job scheduled (daily at 11:00 PM)');
 }
 
 /**
@@ -147,5 +173,40 @@ export async function queueDocumentProcessing(data: {
   return job.id;
 }
 
+/**
+ * Queue a user's conversations for logging (for logout flow)
+ * This can be called synchronously before logout completes
+ */
+export async function queueUserConversationLogging(data: {
+  userId: string;
+  familyId: string;
+}) {
+  logger.info('Queueing user conversation logging', {
+    userId: data.userId,
+  });
+
+  const job = await conversationLoggingQueue.add(
+    'log-user-conversations',
+    {
+      type: 'log-user-conversations',
+      ...data,
+    },
+    {
+      attempts: 2,
+      backoff: {
+        type: 'exponential',
+        delay: 3000,
+      },
+    }
+  );
+
+  logger.info('User conversation logging job queued', {
+    jobId: job.id,
+    userId: data.userId,
+  });
+
+  return job.id;
+}
+
 // Export queues for job status checking
-export { medicationQueue, documentQueue };
+export { medicationQueue, documentQueue, conversationLoggingQueue };

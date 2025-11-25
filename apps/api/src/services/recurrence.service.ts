@@ -1,4 +1,4 @@
-import { CareTask, CareTaskStatus, CareTaskPriority } from '@carecompanion/database';
+import { CareTask, CareTaskStatus, CareTaskPriority, CareTaskType } from '@carecompanion/database';
 import { 
   addDays, 
   addWeeks, 
@@ -29,6 +29,7 @@ export interface VirtualTask {
   assignedToId?: string | null;
   priority: CareTaskPriority;
   status: CareTaskStatus;
+  taskType: CareTaskType;
   isVirtual: true;
   parentTaskId: string;
   recurrenceRule: string;
@@ -135,6 +136,7 @@ export class RecurrenceService {
           assignedToId: task.assignedToId,
           priority: task.priority,
           status: CareTaskStatus.PENDING,
+          taskType: task.taskType,
           isVirtual: true,
           parentTaskId: task.id,
           recurrenceRule: task.recurrenceRule
@@ -242,7 +244,7 @@ export class RecurrenceService {
     parentTask: CareTask,
     occurrenceDate: Date,
     userId: string
-  ): Omit<CareTask, 'id' | 'createdAt' | 'updatedAt' | 'logs' | 'assignedTo' | 'createdBy' | 'family' | 'parentTask' | 'recurrenceInstances'> {
+  ): Omit<CareTask, 'id' | 'createdAt' | 'updatedAt' | 'logs' | 'assignedTo' | 'createdBy' | 'family' | 'parentTask' | 'recurrenceInstances' | 'recommendations'> {
     return {
       familyId: parentTask.familyId,
       title: parentTask.title,
@@ -253,6 +255,7 @@ export class RecurrenceService {
       createdById: userId,
       priority: parentTask.priority,
       status: CareTaskStatus.PENDING,
+      taskType: parentTask.taskType,
       recurrenceRule: null,
       recurrenceEndDate: null,
       parentTaskId: parentTask.id,

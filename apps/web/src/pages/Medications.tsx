@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { cn } from '@/lib/utils';
+import { cn, localDayBounds } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { AddMedicationModal } from '@/components/AddMedicationModal';
 import { EditMedicationModal } from '@/components/EditMedicationModal';
@@ -88,7 +88,14 @@ export function Medications() {
         ]);
         
         setMedications(medsResponse.data.medications);
-        setTodaySchedule(scheduleResponse.data.schedule);
+        const { startDate, endDate } = localDayBounds();
+        const filteredSchedule = Array.isArray(scheduleResponse.data.schedule)
+          ? scheduleResponse.data.schedule.filter((item: any) => {
+              const ts = new Date(item.scheduledTime);
+              return ts >= startDate && ts <= endDate;
+            })
+          : [];
+        setTodaySchedule(filteredSchedule);
       }
     } catch (err) {
       setError('Failed to load medication data');
@@ -176,7 +183,7 @@ export function Medications() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600 dark:text-primary-400" />
       </div>
     );
   }
@@ -188,16 +195,16 @@ export function Medications() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Medications</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Medications</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Track medications and adherence
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors w-full sm:w-auto"
         >
           <Plus className="h-5 w-5" />
           Add Medication
@@ -205,7 +212,7 @@ export function Medications() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-2">
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
           {error}
         </div>
@@ -213,54 +220,54 @@ export function Medications() {
 
       {/* Today's Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card">
+        <div className="card dark:bg-slate-800 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Pending Today</p>
-              <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Pending Today</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{pendingCount}</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-              <Clock className="h-6 w-6 text-yellow-600" />
+            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
+              <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
-        
-        <div className="card">
+
+        <div className="card dark:bg-slate-800 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Given Today</p>
-              <p className="text-2xl font-bold text-gray-900">{givenCount}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Given Today</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{givenCount}</p>
             </div>
-            <div className="w-12 h-12 bg-success-light rounded-xl flex items-center justify-center">
-              <Check className="h-6 w-6 text-success" />
+            <div className="w-12 h-12 bg-success-light dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+              <Check className="h-6 w-6 text-success dark:text-green-400" />
             </div>
           </div>
         </div>
-        
-        <div className="card">
+
+        <div className="card dark:bg-slate-800 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Missed/Refused</p>
-              <p className="text-2xl font-bold text-gray-900">{missedCount}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Missed/Refused</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{missedCount}</p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-              <X className="h-6 w-6 text-red-600" />
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
+              <X className="h-6 w-6 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Today's Schedule */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Today's Schedule</h2>
-          <span className="text-sm text-gray-500">
+      <div className="card dark:bg-slate-800 dark:border-slate-700">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Today's Schedule</h2>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             {format(new Date(), 'EEEE, MMMM d')}
           </span>
         </div>
 
         {todaySchedule.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No medications scheduled for today</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">No medications scheduled for today</p>
         ) : (
           <div className="space-y-3">
             {todaySchedule.map((item) => {
@@ -274,44 +281,44 @@ export function Medications() {
                 <div
                   key={`${item.medicationId}-${item.scheduledTime}`}
                   className={cn(
-                    "flex items-center justify-between p-4 rounded-xl transition-all",
-                    item.status === 'given' && "bg-green-50",
-                    item.status === 'pending' && "bg-gray-50 hover:bg-gray-100",
-                    (item.status === 'missed' || item.status === 'refused') && "bg-red-50"
+                    "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl transition-all",
+                    item.status === 'given' && "bg-green-50 dark:bg-green-900/20",
+                    item.status === 'pending' && "bg-gray-50 hover:bg-gray-100 dark:bg-slate-700/50 dark:hover:bg-slate-700",
+                    (item.status === 'missed' || item.status === 'refused') && "bg-red-50 dark:bg-red-900/20"
                   )}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full">
                     <div className={cn(
                       "text-sm font-semibold min-w-[60px]",
-                      item.status === 'given' && "text-green-700",
-                      item.status === 'pending' && "text-primary-600",
-                      (item.status === 'missed' || item.status === 'refused') && "text-red-700"
+                      item.status === 'given' && "text-green-700 dark:text-green-400",
+                      item.status === 'pending' && "text-primary-600 dark:text-primary-400",
+                      (item.status === 'missed' || item.status === 'refused') && "text-red-700 dark:text-red-400"
                     )}>
                       {item.timeString}
                     </div>
-                    <div>
-                      <div className="font-semibold text-gray-900">{item.medicationName}</div>
-                      <div className="text-sm text-gray-600">{item.dosage}</div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">{item.medicationName}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{item.dosage}</div>
                       {item.status === 'given' && item.givenTime && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           Given {item.givenBy ? `by ${item.givenBy.firstName} ${item.givenBy.lastName}` : ''} at{' '}
                           {format(new Date(item.givenTime), 'h:mm a')}
                         </div>
                       )}
                       {item.status === 'pending' && !isPastTime && (
-                        <div className="text-xs text-blue-600 mt-1">
+                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                           Due in {minutesUntil} min
                         </div>
                       )}
                       {item.status === 'pending' && isPastTime && minutesLate > 0 && (
-                        <div className="text-xs text-orange-600 mt-1">
+                        <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                           {minutesLate} min late
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto sm:justify-end">
                     <button
                       onClick={(e) => {
                         console.log('Medications page - Given button clicked', { item });
@@ -320,7 +327,7 @@ export function Medications() {
                         handleLogMedication(item, 'given');
                       }}
                       className={cn(
-                        "p-2 text-white rounded-lg hover:bg-green-700 transition-colors",
+                        "p-2 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto justify-center flex",
                         item.status === 'given' ? 'bg-green-700' : 'bg-success'
                       )}
                       title="Mark as given"
@@ -335,7 +342,7 @@ export function Medications() {
                         handleLogMedication(item, 'missed');
                       }}
                       className={cn(
-                        "p-2 text-white rounded-lg hover:bg-red-700 transition-colors",
+                        "p-2 text-white rounded-lg hover:bg-red-700 transition-colors w-full sm:w-auto justify-center flex",
                         item.status === 'missed' || item.status === 'refused' ? 'bg-red-700' : 'bg-red-600'
                       )}
                       title="Mark as missed"
@@ -351,33 +358,33 @@ export function Medications() {
       </div>
 
       {/* Active Medications */}
-      <div className="card">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Active Medications</h2>
-        
+      <div className="card dark:bg-slate-800 dark:border-slate-700">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Active Medications</h2>
+
         {medications.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No active medications</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">No active medications</p>
         ) : (
           <div className="grid gap-4">
             {medications.map((medication) => (
               <div
                 key={medication.id}
-                className="border border-gray-200 rounded-xl p-4 hover:border-primary-300 transition-colors"
+                className="border border-gray-200 dark:border-slate-600 rounded-xl p-4 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-gray-900 text-lg">{medication.name}</h3>
-                    <p className="text-gray-600">{medication.dosage} • {medication.frequency}</p>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{medication.name}</h3>
+                    <p className="text-gray-600 dark:text-gray-400">{medication.dosage} • {medication.frequency}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setSelectedMedication(medication)}
-                      className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:text-gray-400 dark:hover:text-primary-400 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(medication.id)}
-                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:text-gray-400 dark:hover:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -386,23 +393,23 @@ export function Medications() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-500">Schedule:</span>
-                    <p className="font-medium">{medication.scheduleTime.join(', ')}</p>
+                    <span className="text-gray-500 dark:text-gray-400">Schedule:</span>
+                    <p className="font-medium dark:text-gray-200">{medication.scheduleTime.join(', ')}</p>
                   </div>
-                  
+
                   {medication.prescribedBy && (
                     <div>
-                      <span className="text-gray-500">Prescribed by:</span>
-                      <p className="font-medium">{medication.prescribedBy}</p>
+                      <span className="text-gray-500 dark:text-gray-400">Prescribed by:</span>
+                      <p className="font-medium dark:text-gray-200">{medication.prescribedBy}</p>
                     </div>
                   )}
-                  
+
                   {medication.currentSupply !== null && medication.currentSupply !== undefined && (
                     <div>
-                      <span className="text-gray-500">Supply remaining:</span>
+                      <span className="text-gray-500 dark:text-gray-400">Supply remaining:</span>
                       <p className={cn(
-                        "font-medium",
-                        medication.needsRefill && "text-red-600"
+                        "font-medium dark:text-gray-200",
+                        medication.needsRefill && "text-red-600 dark:text-red-400"
                       )}>
                         {medication.currentSupply} {medication.dosageUnit || 'pills'}
                         {medication.daysRemaining !== null && ` (${medication.daysRemaining} days)`}
@@ -413,14 +420,14 @@ export function Medications() {
 
                 {medication.instructions && (
                   <div className="mt-3 text-sm">
-                    <span className="text-gray-500">Instructions:</span>
-                    <p className="text-gray-700">{medication.instructions}</p>
+                    <span className="text-gray-500 dark:text-gray-400">Instructions:</span>
+                    <p className="text-gray-700 dark:text-gray-300">{medication.instructions}</p>
                   </div>
                 )}
 
                 {medication.needsRefill && (
-                  <div className="mt-3 p-3 bg-yellow-50 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-yellow-700">
+                  <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
                       <AlertCircle className="h-4 w-4" />
                       <span className="text-sm font-medium">Refill needed soon</span>
                     </div>
@@ -431,7 +438,7 @@ export function Medications() {
                           handleRefill(medication, Number(pills));
                         }
                       }}
-                      className="flex items-center gap-1 text-sm text-yellow-700 font-medium hover:text-yellow-800"
+                      className="flex items-center justify-center gap-1 text-sm text-yellow-700 dark:text-yellow-400 font-medium hover:text-yellow-800 dark:hover:text-yellow-300 w-full sm:w-auto"
                     >
                       <RefreshCw className="h-4 w-4" />
                       Record Refill

@@ -1,7 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { prisma } from '@carecompanion/database';
 import { logger } from '../../utils/logger';
-import { openAiService } from '../../services/ai/openai.service';
+import { claudeDocumentService } from '../../services/ai/claudeDocument.service';
 import { DocumentProcessingService } from '../../services/documentProcessing.service';
 import { s3Service } from '../../services/s3.service';
 import pdfParse from 'pdf-parse';
@@ -53,14 +53,14 @@ async function processDocument(job: Job<DocumentProcessingJobData>) {
     });
 
     // Parse the document with AI
-    logger.info('Parsing document with OpenAI', { documentId, fileType });
+    logger.info('Parsing document with Claude', { documentId, fileType });
 
     let parsedData: any;
 
     // Determine parsing method based on file type
     if (fileType.startsWith('image/')) {
       // For images, use the image parsing method
-      parsedData = await openAiService.streamParseImageDocument(
+      parsedData = await claudeDocumentService.streamParseImageDocument(
         { imageUrl: fileUrl, docDomainType: 'medical_record' },
         (event) => {
           // Log events during parsing
@@ -79,7 +79,7 @@ async function processDocument(job: Job<DocumentProcessingJobData>) {
       const pdfText = await extractPdfText(buffer);
 
       if (pdfText && pdfText.trim().length > 100) {
-        parsedData = await openAiService.streamParsePdfText(
+        parsedData = await claudeDocumentService.streamParsePdfText(
           { text: pdfText, docDomainType: 'medical_record' },
           (event) => {
             if (event.type === 'status') {
@@ -88,9 +88,9 @@ async function processDocument(job: Job<DocumentProcessingJobData>) {
           }
         );
       } else {
-        // Fall back to file upload parsing for PDFs without text
-        parsedData = await openAiService.streamParsePdfFileUpload(
-          { buffer: Buffer.from(buffer), docDomainType: 'medical_record' },
+        // Fall back to text parsing with warning for PDFs without text
+        parsedData = await claudeDocumentService.streamParsePdfText(
+          { text: '[PDF contains no extractable text - may be a scanned document]', docDomainType: 'medical_record' },
           (event) => {
             if (event.type === 'status') {
               logger.debug('Document parsing status', { documentId, status: event.status });

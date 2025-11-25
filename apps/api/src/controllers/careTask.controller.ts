@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma, CareTaskPriority, CareTaskStatus } from '@carecompanion/database';
+import { prisma, CareTaskPriority, CareTaskStatus, CareTaskType } from '@carecompanion/database';
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
@@ -17,6 +17,7 @@ const createCareTaskSchema = z.object({
   reminderDate: z.string().optional(),
   assignedToId: z.string().nullable().optional(),
   priority: z.enum(['high', 'medium', 'low']).optional().default('medium'),
+  taskType: z.enum(['task', 'appointment']).optional().default('task'),
   recurrenceRule: z.string().optional(), // RRULE format for recurring tasks
   isRecurring: z.boolean().optional(),
   recurrenceType: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional(),
@@ -30,6 +31,7 @@ const updateCareTaskSchema = z.object({
   reminderDate: z.string().optional(),
   assignedToId: z.string().nullable().optional(),
   priority: z.enum(['high', 'medium', 'low']).optional(),
+  taskType: z.enum(['task', 'appointment']).optional(),
   status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
 });
 
@@ -43,7 +45,7 @@ export class CareTaskController {
       }
 
       const userId = req.auth!.userId;
-      const { title, description, dueDate, reminderDate, assignedToId: rawAssignedToId, priority, isRecurring, recurrenceType, recurrenceEndDate } = validation.data;
+      const { title, description, dueDate, reminderDate, assignedToId: rawAssignedToId, priority, taskType, isRecurring, recurrenceType, recurrenceEndDate } = validation.data;
 
       logger.debug('Creating care task with data:', {
         title,
@@ -121,6 +123,7 @@ export class CareTaskController {
         createdById: user.id,
         priority: (priority?.toUpperCase() || 'MEDIUM') as CareTaskPriority,
         status: 'PENDING' as CareTaskStatus,
+        taskType: (taskType?.toUpperCase() || 'TASK') as CareTaskType,
         recurrenceRule,
         recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
         isRecurrenceTemplate: !!recurrenceRule,
@@ -163,9 +166,10 @@ export class CareTaskController {
       userId: user.id,
     });
 
+    const typeLabel = taskType === 'appointment' ? 'Appointment' : 'Task';
     res.status(201).json({
       task,
-      message: isRecurring ? 'Recurring appointment created' : 'Appointment created'
+      message: isRecurring ? `Recurring ${typeLabel.toLowerCase()} created` : `${typeLabel} created`
     });
     } catch (error: any) {
       logger.error('Failed to create care task:', error);
@@ -513,6 +517,10 @@ export class CareTaskController {
     
     if (updates.status) {
       prismaUpdates.status = updates.status.toUpperCase().replace(/-/g, '_') as CareTaskStatus;
+    }
+
+    if (updates.taskType) {
+      prismaUpdates.taskType = updates.taskType.toUpperCase() as CareTaskType;
     }
 
     // Update the task

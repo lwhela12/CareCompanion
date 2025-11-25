@@ -3,6 +3,7 @@ import { X, Calendar, ClipboardList, User, FileText, UserCheck, Clock } from 'lu
 import { format } from 'date-fns';
 import { useAuth } from '@clerk/clerk-react';
 import { api } from '../lib/api';
+import { dateInputToLocalISOString } from '@/lib/utils';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -71,17 +72,18 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
         title: formData.title,
         description: formData.description || formData.notes,
         priority: formData.priority,
+        taskType: 'task', // Explicitly mark as task (not appointment)
         assignedToId: formData.assignedToId || undefined,
       };
 
       // Add reminder date if provided
       if (formData.reminderDate) {
-        requestBody.reminderDate = new Date(formData.reminderDate).toISOString();
+        requestBody.reminderDate = dateInputToLocalISOString(formData.reminderDate);
       }
 
       // Add due date if provided
       if (formData.dueDate) {
-        requestBody.dueDate = new Date(formData.dueDate).toISOString();
+        requestBody.dueDate = dateInputToLocalISOString(formData.dueDate);
       }
 
       // Create task
@@ -119,14 +121,14 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={onClose} />
-        
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
-          <div className="flex items-center justify-between p-6 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">Add Task</h3>
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-opacity-70 dark:bg-black" onClick={onClose} />
+
+        <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full">
+          <div className="flex items-center justify-between p-6 border-b dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Task</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
+              className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300"
             >
               <X className="h-5 w-5" />
             </button>
@@ -136,7 +138,7 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
             <div className="space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <ClipboardList className="inline h-4 w-4 mr-1" />
                   Task Title
                 </label>
@@ -145,20 +147,20 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="e.g., Change bed sheets, Call insurance company"
                 />
               </div>
 
               {/* Priority */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Priority
                 </label>
                 <select
                   value={formData.priority}
                   onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="low">Low Priority</option>
                   <option value="medium">Medium Priority</option>
@@ -168,14 +170,14 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
 
               {/* Assigned To */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <UserCheck className="inline h-4 w-4 mr-1" />
                   Assigned To
                 </label>
                 <select
                   value={formData.assignedToId}
                   onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="">No assignment (family shared)</option>
                   {patient && (
@@ -193,7 +195,7 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
 
               {/* Reminder Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <Clock className="inline h-4 w-4 mr-1" />
                   Reminder Date (Optional)
                 </label>
@@ -201,14 +203,14 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
                   type="date"
                   value={formData.reminderDate}
                   onChange={(e) => setFormData({ ...formData, reminderDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
-                <p className="mt-1 text-xs text-gray-500">Task will start appearing in daily lists from this date</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Task will start appearing in daily lists from this date</p>
               </div>
 
               {/* Due Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <Calendar className="inline h-4 w-4 mr-1" />
                   Due Date (Optional)
                 </label>
@@ -217,14 +219,14 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
                   value={formData.dueDate}
                   onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                   min={formData.reminderDate}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
-                <p className="mt-1 text-xs text-gray-500">Task deadline - leave empty for open-ended tasks</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Task deadline - leave empty for open-ended tasks</p>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <FileText className="inline h-4 w-4 mr-1" />
                   Notes
                 </label>
@@ -232,7 +234,7 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Any additional details or instructions..."
                 />
               </div>
@@ -243,7 +245,7 @@ export function AddTaskModal({ isOpen, onClose, onTaskAdded, defaultDate }: AddT
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
               >
                 Cancel
               </button>

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { conversationService } from '../services/conversation.service';
+import { conversationSummaryService } from '../services/conversationSummary.service';
 import { z } from 'zod';
 import { validate } from '../middleware/validate';
 
@@ -142,6 +143,63 @@ router.delete('/:id', async (req, res, next) => {
     }
 
     res.json({ message: 'Conversation deleted' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Log a conversation to the journal
+router.post('/:id/log-to-journal', async (req, res, next) => {
+  try {
+    // First verify the conversation belongs to the user
+    const conversation = await conversationService.getConversation(
+      req.params.id,
+      req.user!.familyId
+    );
+
+    if (!conversation) {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Conversation not found' },
+      });
+      return;
+    }
+
+    const result = await conversationSummaryService.logToJournal(
+      req.params.id,
+      req.user!.id,
+      req.user!.familyId
+    );
+
+    if (!result.success) {
+      res.status(400).json({
+        error: { code: 'LOG_FAILED', message: result.message },
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      journalEntryId: result.journalEntryId,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Log all unlogged conversations for the current user (for logout flow)
+router.post('/log-all-to-journal', async (req, res, next) => {
+  try {
+    const loggedCount = await conversationSummaryService.logUnloggedConversations(
+      req.user!.id,
+      req.user!.familyId
+    );
+
+    res.json({
+      success: true,
+      loggedCount,
+      message: `Logged ${loggedCount} conversation(s) to journal`,
+    });
   } catch (error) {
     next(error);
   }
