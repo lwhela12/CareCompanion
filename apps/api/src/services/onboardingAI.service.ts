@@ -178,10 +178,13 @@ class OnboardingAIService {
     const updatedData = { ...collectedData };
 
     // Build messages for Claude - we'll continue adding to this as we loop
-    const claudeMessages: Anthropic.MessageParam[] = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // Filter out any messages with empty content to prevent API errors
+    const claudeMessages: Anthropic.MessageParam[] = messages
+      .filter((m) => m.content && m.content.trim().length > 0)
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
     try {
       let continueLoop = true;
