@@ -241,7 +241,7 @@ export function Dashboard() {
       }
       
       // Count tasks and appointments (separate them properly)
-      let taskCount = pendingMedications; // Start with pending medications
+      let taskCount = 0; // Tasks only - medications counted separately
       let appointmentCount = 0;
       const appointmentsList: Array<{
         id: string;

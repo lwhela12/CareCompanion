@@ -98,6 +98,19 @@ export function OnboardingChat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Refs to avoid stale closure issues in sendMessage callback
+  const collectedDataRef = useRef(collectedData);
+  const messagesRef = useRef(messages);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    collectedDataRef.current = collectedData;
+  }, [collectedData]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -232,8 +245,8 @@ export function OnboardingChat() {
         },
         body: JSON.stringify({
           message: content,
-          conversationHistory: messages.map(m => ({ role: m.role, content: m.content })),
-          collectedData,
+          conversationHistory: messagesRef.current.map(m => ({ role: m.role, content: m.content })),
+          collectedData: collectedDataRef.current,
         }),
       });
 

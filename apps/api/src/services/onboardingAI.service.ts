@@ -31,6 +31,7 @@ export interface CollectedMedication {
 export interface CollectedCareTask {
   title: string;
   description?: string;
+  taskType?: 'task' | 'appointment';
   dueDate?: string;
   scheduledTime?: string;
   dayOfWeek?: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -79,10 +80,27 @@ QUESTION FLOW (one at a time, in this order):
    - If you don't know who they're caring for, ask
    - If you don't know the person's FULL name (first AND last), ask "What's their full name?" → use collect_patient_info tool (MUST have both firstName and lastName)
    - If you don't know their age, ask
-4. ALWAYS ask about medications: "Does [patient name] take any medications you'd like me to help track?" → use collect_medication tool for each
-5. ALWAYS ask about care tasks/appointments: "Are there any regular appointments or care routines I should know about? Things like doctor visits, therapy sessions, or daily activities?" → use collect_care_task tool for each
-6. ALWAYS ask about family: "Is there anyone else helping care for [patient name] that you'd like to invite to the care team?" → use collect_family_member tool for each
-7. ONLY after asking about medications, care tasks, AND family members, offer to set up their dashboard
+4. MEDICATIONS: Ask "Does [patient name] take any medications you'd like me to help track?"
+   → After they mention one, use collect_medication tool, then ask "Any other medications?"
+   → Keep asking until they say no/none/that's it
+5. TASKS & APPOINTMENTS: Ask "Are there any regular appointments or care routines? Things like doctor visits, therapy, or daily activities?"
+   → After they mention one, use collect_care_task tool, then ask "Any other appointments or routines?"
+   → Keep asking until they say no/none/that's it
+6. FAMILY MEMBERS: Ask "Is there anyone else helping care for [patient name] that you'd like to invite?"
+   → After they mention one, use collect_family_member tool, then ask "Anyone else to invite?"
+   → Keep asking until they say no/none/that's it
+7. ONLY after completing ALL three categories (medications, tasks, family), offer to set up their dashboard
+
+FOLLOW-UP PATTERN:
+- After adding each item, ALWAYS ask "Any others?" or "Any other [category]?"
+- Only move to the next category when they explicitly say no, none, that's all, etc.
+- Example flow:
+  User: "She takes Aricept"
+  You: [collect_medication] "Got it, Aricept added. Any other medications?"
+  User: "Metformin too"
+  You: [collect_medication] "Added Metformin. Any others?"
+  User: "No, that's it"
+  You: "Great. Now, are there any regular appointments or care routines..."
 
 RESPONSE FORMAT:
 - 1-2 sentences acknowledging what they said (with empathy if appropriate)
@@ -101,9 +119,23 @@ EXAMPLE BAD RESPONSE (too many questions):
 DATA TIPS:
 - Estimate DOB from age: if someone is 67 in 2025, their birth year is 2025-67=1958, so use "1958-01-01"
 - Infer gender from "mom/dad", "she/he"
-- Convert times: "morning" → "08:00", "evening" → "18:00"
-- For appointments with times, include scheduledTime (e.g., "doctor at 2pm" → scheduledTime: "14:00")
-- IMPORTANT: Only call each collection tool ONCE per item. Don't call collect_medication multiple times for the same medication.
+- Convert times: "morning" → "08:00", "evening" → "18:00", "night" → "21:00", "noon" → "12:00"
+
+TASK vs APPOINTMENT DISTINCTION (IMPORTANT):
+- APPOINTMENT: Doctor visits, therapy sessions, scheduled meetings - anything with a specific time and place you need to attend
+  → Use taskType="appointment" and ALWAYS include scheduledTime
+  → Example: "Doctor at 2pm tomorrow" → taskType="appointment", scheduledTime="14:00", dueDate="YYYY-MM-DD"
+
+- TASK: To-do items like "pick up prescription", "daily walk", routines - things to complete but not at a fixed scheduled time
+  → Use taskType="task"
+  → Example: "Daily walk" → taskType="task", recurrenceType="daily"
+  → Example: "Take prescription daily" is a MEDICATION, not a task!
+
+DUPLICATE PREVENTION:
+- The tool results show what you've already collected - CHECK before adding
+- NEVER call collect_care_task twice for the same item
+- If the user mentions "daily walk" once, only add it once
+- If unsure whether something is a duplicate, ask the user
 
 WHEN READY:
 Only offer to set up the dashboard AFTER you have:
@@ -349,18 +381,21 @@ class OnboardingAIService {
 
   private handleCollectCareTask(input: CreateCareTaskInput, data: OnboardingCollectedData): void {
     // Check for duplicate by title (case-insensitive)
-    // Note: The AI should now avoid duplicates since we include collectedSoFar in tool results
-    if (!data.careTasks.some(t => t.title.toLowerCase() === input.title.toLowerCase())) {
-      data.careTasks.push({
-        title: input.title,
-        description: input.description,
-        dueDate: input.dueDate,
-        scheduledTime: input.scheduledTime,
-        dayOfWeek: input.dayOfWeek,
-        recurrenceType: input.recurrenceType,
-        priority: input.priority || 'medium',
-      });
+    if (data.careTasks.some(t => t.title.toLowerCase() === input.title.toLowerCase())) {
+      logger.info('Duplicate care task ignored', { title: input.title });
+      return;
     }
+
+    data.careTasks.push({
+      title: input.title,
+      description: input.description,
+      taskType: input.taskType,
+      dueDate: input.dueDate,
+      scheduledTime: input.scheduledTime,
+      dayOfWeek: input.dayOfWeek,
+      recurrenceType: input.recurrenceType,
+      priority: input.priority || 'medium',
+    });
   }
 
   private handleCollectFamilyMember(input: AddFamilyMemberInput, data: OnboardingCollectedData): void {

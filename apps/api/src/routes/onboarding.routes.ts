@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import { addDays } from 'date-fns';
 import { sendEmail } from '../services/email.service';
+import { combineDateAndTime } from '../services/ai/tools';
 
 const router = Router();
 
@@ -41,6 +42,7 @@ const chatSchema = z.object({
     careTasks: z.array(z.object({
       title: z.string(),
       description: z.string().optional(),
+      taskType: z.enum(['task', 'appointment']).optional(),
       dueDate: z.string().optional(),
       scheduledTime: z.string().optional(),
       dayOfWeek: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']).optional(),
@@ -78,6 +80,7 @@ const confirmSchema = z.object({
     careTasks: z.array(z.object({
       title: z.string(),
       description: z.string().optional(),
+      taskType: z.enum(['task', 'appointment']).optional(),
       dueDate: z.string().optional(),
       scheduledTime: z.string().optional(),
       dayOfWeek: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']).optional(),
@@ -366,13 +369,13 @@ router.post('/confirm', async (req: Request, res: Response) => {
           }
 
           // Calculate due date with optional time
+          // Default time is 9 AM for all tasks without explicit time
           let dueDate: Date;
+          const defaultTime = '09:00';
+
           if (task.dueDate) {
-            dueDate = new Date(task.dueDate);
-            if (task.scheduledTime) {
-              const [hours, minutes] = task.scheduledTime.split(':').map(Number);
-              dueDate.setHours(hours, minutes, 0, 0);
-            }
+            // Use combineDateAndTime for timezone-safe parsing
+            dueDate = combineDateAndTime(task.dueDate, task.scheduledTime || defaultTime);
           } else if (task.dayOfWeek) {
             // Calculate next occurrence of the specified day of week
             const dayMap: Record<string, number> = {
@@ -386,18 +389,17 @@ router.post('/confirm', async (req: Request, res: Response) => {
             // If today is the target day, use today (daysUntilTarget = 0)
             dueDate.setDate(dueDate.getDate() + daysUntilTarget);
 
-            if (task.scheduledTime) {
-              const [hours, minutes] = task.scheduledTime.split(':').map(Number);
-              dueDate.setHours(hours, minutes, 0, 0);
-            } else {
-              dueDate.setHours(9, 0, 0, 0); // Default to 9 AM
-            }
+            // Set time - use provided scheduledTime or default to 9 AM
+            const [hours, minutes] = (task.scheduledTime || defaultTime).split(':').map(Number);
+            dueDate.setHours(hours, minutes, 0, 0);
           } else if (task.scheduledTime) {
             dueDate = new Date();
             const [hours, minutes] = task.scheduledTime.split(':').map(Number);
             dueDate.setHours(hours, minutes, 0, 0);
           } else {
+            // No date info at all - default to today at 9 AM
             dueDate = new Date();
+            dueDate.setHours(9, 0, 0, 0);
           }
 
           return tx.careTask.create({
@@ -405,6 +407,7 @@ router.post('/confirm', async (req: Request, res: Response) => {
               familyId: family.id,
               title: task.title,
               description: task.description,
+              taskType: task.taskType === 'appointment' ? 'APPOINTMENT' : 'TASK',
               priority: task.priority === 'high' ? 'HIGH' : task.priority === 'low' ? 'LOW' : 'MEDIUM',
               status: 'PENDING',
               dueDate,

@@ -1289,16 +1289,21 @@ export const collectMedicationTool: Anthropic.Tool = {
 // Collect Care Task Tool (for onboarding)
 export const collectCareTaskTool: Anthropic.Tool = {
   name: 'collect_care_task',
-  description: 'Add a recurring care task or appointment. Call this for regular activities like doctor appointments, therapy sessions, or daily routines.',
+  description: 'Add a care task OR appointment. Use taskType="appointment" for doctor visits, therapy sessions, and scheduled meetings. Use taskType="task" for to-do items like picking up prescriptions or daily routines.',
   input_schema: {
     type: 'object' as const,
     properties: {
       title: { type: 'string', description: 'Short title for the task' },
       description: { type: 'string', description: 'Detailed description' },
+      taskType: {
+        type: 'string',
+        enum: ['task', 'appointment'],
+        description: 'Use "appointment" for scheduled visits/meetings with specific times (doctor, therapy). Use "task" for to-do items and errands.',
+      },
       dueDate: { type: 'string', description: 'Due date in YYYY-MM-DD format (optional)' },
       scheduledTime: {
         type: 'string',
-        description: 'The specific time for the task/appointment in HH:MM 24-hour format (e.g., "11:00" for 11 AM). Include for appointments.',
+        description: 'The specific time in HH:MM 24-hour format (e.g., "14:00" for 2 PM). REQUIRED for appointments.',
       },
       dayOfWeek: {
         type: 'string',
@@ -1308,7 +1313,7 @@ export const collectCareTaskTool: Anthropic.Tool = {
       recurrenceType: {
         type: 'string',
         enum: ['daily', 'weekly', 'biweekly', 'monthly', 'once'],
-        description: 'How often this task occurs',
+        description: 'How often this task occurs. Use "once" for one-time appointments.',
       },
       priority: {
         type: 'string',
