@@ -1,9 +1,10 @@
 import { Worker } from 'bullmq';
 import { logger } from '../utils/logger';
-import { medicationQueue, documentQueue, conversationLoggingQueue, closeQueues } from './queues';
+import { medicationQueue, documentQueue, conversationLoggingQueue, mealAnalysisQueue, closeQueues } from './queues';
 import { createMedicationReminderWorker } from './workers/medicationReminder.worker';
 import { createDocumentProcessingWorker } from './workers/documentProcessing.worker';
 import { createConversationLoggingWorker } from './workers/conversationLogging.worker';
+import { createMealAnalysisWorker, MealAnalysisJobData } from './workers/mealAnalysis.worker';
 import { config } from '../config';
 
 // Store workers for cleanup
@@ -45,8 +46,9 @@ export async function initializeJobs() {
     const medicationWorker = createMedicationReminderWorker(connection);
     const documentWorker = createDocumentProcessingWorker(connection);
     const conversationWorker = createConversationLoggingWorker(connection);
+    const mealAnalysisWorker = createMealAnalysisWorker(connection);
 
-    workers = [medicationWorker, documentWorker, conversationWorker];
+    workers = [medicationWorker, documentWorker, conversationWorker, mealAnalysisWorker];
 
     logger.info('Job workers created', {
       workers: workers.map((w) => w.name),
@@ -208,5 +210,32 @@ export async function queueUserConversationLogging(data: {
   return job.id;
 }
 
+/**
+ * Queue a meal for AI analysis
+ * This is called by the nutrition controller after creating the meal log
+ */
+export async function queueMealAnalysis(data: MealAnalysisJobData) {
+  logger.info('Queueing meal for analysis', {
+    mealLogId: data.mealLogId,
+    photoCount: data.photoUrls.length,
+    hasDescription: !!data.description,
+  });
+
+  const job = await mealAnalysisQueue.add('analyze-meal', data, {
+    attempts: 2, // Fewer retries for AI calls
+    backoff: {
+      type: 'exponential',
+      delay: 5000, // Start with 5 second delay
+    },
+  });
+
+  logger.info('Meal analysis job queued', {
+    jobId: job.id,
+    mealLogId: data.mealLogId,
+  });
+
+  return job.id;
+}
+
 // Export queues for job status checking
-export { medicationQueue, documentQueue, conversationLoggingQueue };
+export { medicationQueue, documentQueue, conversationLoggingQueue, mealAnalysisQueue };

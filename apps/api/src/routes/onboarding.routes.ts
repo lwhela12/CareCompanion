@@ -70,6 +70,10 @@ const confirmSchema = z.object({
       gender: z.enum(['male', 'female', 'other']).optional().default('other'),
       relationship: z.string().min(1),
     }),
+    dietaryInfo: z.object({
+      allergies: z.array(z.string()).optional().default([]),
+      dietaryRestrictions: z.array(z.string()).optional().default([]),
+    }).optional(),
     medications: z.array(z.object({
       name: z.string(),
       dosage: z.string().optional().default(''),
@@ -96,6 +100,11 @@ const confirmSchema = z.object({
     familyName: z.string().optional(),
     conversationSummary: z.string().optional(),
   }),
+  // Conversation history from onboarding chat (to persist for continuity)
+  conversationHistory: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+  })).optional().default([]),
 });
 
 /**
@@ -257,7 +266,7 @@ router.post('/confirm', async (req: Request, res: Response) => {
       return;
     }
 
-    const { collectedData } = parseResult.data;
+    const { collectedData, conversationHistory } = parseResult.data;
 
     // Get or create user
     let user = await prisma.user.findUnique({
@@ -303,6 +312,8 @@ router.post('/confirm', async (req: Request, res: Response) => {
           lastName: collectedData.patient.lastName,
           dateOfBirth: new Date(collectedData.patient.dateOfBirth),
           gender: collectedData.patient.gender,
+          allergies: collectedData.dietaryInfo?.allergies || [],
+          dietaryRestrictions: collectedData.dietaryInfo?.dietaryRestrictions || [],
         },
       });
 
@@ -468,6 +479,30 @@ router.post('/confirm', async (req: Request, res: Response) => {
         });
       }
 
+      // 8. Create conversation record with onboarding chat history
+      // This ensures CeeCee has context of the onboarding conversation
+      let conversation = null;
+      if (conversationHistory && conversationHistory.length > 0) {
+        conversation = await tx.conversation.create({
+          data: {
+            familyId: family.id,
+            userId: user!.id,
+            title: 'Onboarding with CeeCee',
+          },
+        });
+
+        // Add all messages from onboarding to the conversation
+        for (const msg of conversationHistory) {
+          await tx.chatMessage.create({
+            data: {
+              conversationId: conversation.id,
+              role: msg.role === 'user' ? 'USER' : 'ASSISTANT',
+              content: msg.content,
+            },
+          });
+        }
+      }
+
       return {
         familyId: family.id,
         patientId: patient.id,
@@ -475,6 +510,7 @@ router.post('/confirm', async (req: Request, res: Response) => {
         careTaskCount: careTasks.length,
         invitationCount: invitations.length,
         journalEntryId: journalEntry?.id,
+        conversationId: conversation?.id,
       };
     });
 

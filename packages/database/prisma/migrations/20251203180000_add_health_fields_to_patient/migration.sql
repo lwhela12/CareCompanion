@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "height_cm" DOUBLE PRECISION;
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "weight_kg" DOUBLE PRECISION;
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "activity_level" TEXT;
+ALTER TABLE "patients" ADD COLUMN IF NOT EXISTS "health_conditions" TEXT[] DEFAULT ARRAY[]::TEXT[];

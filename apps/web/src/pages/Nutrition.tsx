@@ -12,7 +12,8 @@ import {
   Mic,
   CheckCircle2,
   XCircle,
-  Info
+  Info,
+  Lightbulb,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -20,12 +21,13 @@ import { cn, localDayBounds } from '@/lib/utils';
 import { api, nutritionApi } from '@/lib/api';
 import { LogMealModal } from '@/components/LogMealModal';
 import { MealDetailModal } from '@/components/MealDetailModal';
+import { NutritionGuidelinesModal } from '@/components/NutritionGuidelinesModal';
 
 interface MealLog {
   id: string;
   mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK' | 'OTHER';
   consumedAt: string;
-  notes?: string;
+  description?: string;
   photoUrls: string[];
   voiceNoteUrl?: string;
   nutritionData?: {
@@ -39,6 +41,7 @@ interface MealLog {
   };
   meetsGuidelines?: boolean;
   concerns: string[];
+  analysisStatus: 'NONE' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   template?: {
     id: string;
     name: string;
@@ -99,10 +102,31 @@ export function Nutrition() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [patientId, setPatientId] = useState<string | null>(null);
+  const [patientName, setPatientName] = useState<string>('');
+  const [hasDietaryInfo, setHasDietaryInfo] = useState(false);
+  const [hasNutritionGuidelines, setHasNutritionGuidelines] = useState(false);
+  const [nutritionGuidelines, setNutritionGuidelines] = useState<any>(null);
+  const [showGuidelinesModal, setShowGuidelinesModal] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Auto-refresh when there are meals with pending analysis
+  useEffect(() => {
+    const hasPendingAnalysis = todaysMeals.some(
+      (meal) => meal.analysisStatus === 'PENDING' || meal.analysisStatus === 'PROCESSING'
+    );
+
+    if (hasPendingAnalysis) {
+      const interval = setInterval(() => {
+        fetchData();
+      }, 5000); // Refresh every 5 seconds
+
+      return () => clearInterval(interval);
+    }
+    return undefined;
+  }, [todaysMeals]);
 
   const fetchData = async () => {
     try {
@@ -110,8 +134,10 @@ export function Nutrition() {
       // First get the patient ID
       const familiesResponse = await api.get('/api/v1/families');
       if (familiesResponse.data.families.length > 0) {
-        const patientIdFromFamily = familiesResponse.data.families[0].patient.id;
+        const family = familiesResponse.data.families[0];
+        const patientIdFromFamily = family.patient.id;
         setPatientId(patientIdFromFamily);
+        setPatientName(family.patient.firstName || 'Patient');
 
         // Fetch today's meals, weekly summary, and templates
         const { startISO, endISO, startDate, endDate } = localDayBounds(new Date());
@@ -131,6 +157,12 @@ export function Nutrition() {
         setTodaysMeals(filteredMeals);
         setWeeklySummary(summaryResponse.data.summary);
         setTemplates(templatesResponse.data.templates);
+        // Set whether patient has dietary restrictions (for conditional concerns display)
+        setHasDietaryInfo(mealsResponse.data.hasDietaryInfo ?? false);
+        // Set whether patient has nutrition guidelines set
+        setHasNutritionGuidelines(mealsResponse.data.hasNutritionGuidelines ?? false);
+        // Set nutrition guidelines data
+        setNutritionGuidelines(mealsResponse.data.nutritionGuidelines ?? null);
       }
     } catch (err) {
       setError('Failed to load nutrition data');
@@ -220,6 +252,26 @@ export function Nutrition() {
         </button>
       </div>
 
+      {/* Setup Nutrition Guidelines Banner - only show when no guidelines exist */}
+      {!hasNutritionGuidelines && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="font-medium text-blue-900 dark:text-blue-100">
+                Set Up Nutrition Guidelines
+              </h3>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                Ask CeeCee to help create personalized nutrition guidelines based on your loved one's health needs.
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-2 italic">
+                Try: "Help me set up nutrition guidelines for {patientName || 'Mom'}"
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Weekly Summary Cards */}
       {weeklySummary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -247,7 +299,13 @@ export function Nutrition() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
+          <div
+            onClick={hasNutritionGuidelines && nutritionGuidelines ? () => setShowGuidelinesModal(true) : undefined}
+            className={cn(
+              "bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4",
+              hasNutritionGuidelines && nutritionGuidelines && "cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+            )}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Guideline Adherence</p>
@@ -256,25 +314,29 @@ export function Nutrition() {
                     ? `${weeklySummary.guidelineAdherence}%`
                     : '—'}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Meals meeting goals</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {hasNutritionGuidelines ? 'Click to view guidelines' : 'Meals meeting goals'}
+                </p>
               </div>
               <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Concerns</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{weeklySummary.totalConcerns}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Items flagged</p>
+          {hasDietaryInfo && (
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Concerns</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{weeklySummary.totalConcerns}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Items flagged</p>
+                </div>
+                <AlertCircle className={cn(
+                  "w-8 h-8",
+                  weeklySummary.totalConcerns > 0 ? "text-yellow-600 dark:text-yellow-400" : "text-gray-400 dark:text-gray-500"
+                )} />
               </div>
-              <AlertCircle className={cn(
-                "w-8 h-8",
-                weeklySummary.totalConcerns > 0 ? "text-yellow-600 dark:text-yellow-400" : "text-gray-400 dark:text-gray-500"
-              )} />
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -337,8 +399,22 @@ export function Nutrition() {
                         </div>
                       )}
 
+                      {/* Analysis Status */}
+                      {(meal.analysisStatus === 'PENDING' || meal.analysisStatus === 'PROCESSING') && (
+                        <div className="flex items-center space-x-2 mb-2 text-blue-600 dark:text-blue-400">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-xs">Analyzing nutrition...</span>
+                        </div>
+                      )}
+                      {meal.analysisStatus === 'FAILED' && (
+                        <div className="flex items-center space-x-2 mb-2 text-red-600 dark:text-red-400">
+                          <XCircle className="w-4 h-4" />
+                          <span className="text-xs">Analysis failed</span>
+                        </div>
+                      )}
+
                       {/* Nutrition Info */}
-                      {meal.nutritionData && (
+                      {meal.nutritionData && meal.analysisStatus === 'COMPLETED' && (
                         <div className="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
                           {meal.nutritionData.estimatedCalories && (
                             <span>~{meal.nutritionData.estimatedCalories} cal</span>
@@ -371,8 +447,8 @@ export function Nutrition() {
                         </div>
                       )}
 
-                      {/* Concerns */}
-                      {meal.concerns && meal.concerns.length > 0 && (
+                      {/* Concerns - Only show if user has dietary restrictions set */}
+                      {hasDietaryInfo && meal.concerns && meal.concerns.length > 0 && (
                         <div className="flex items-start space-x-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded mt-2">
                           <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
                           <div className="flex-1">
@@ -383,7 +459,7 @@ export function Nutrition() {
                       )}
 
                       {/* Guideline Check */}
-                      {meal.meetsGuidelines !== null && (
+                      {meal.analysisStatus === 'COMPLETED' && meal.meetsGuidelines !== null && (
                         <div className="flex items-center space-x-2 mt-2">
                           {meal.meetsGuidelines ? (
                             <>
@@ -399,9 +475,9 @@ export function Nutrition() {
                         </div>
                       )}
 
-                      {/* Notes */}
-                      {meal.notes && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">"{meal.notes}"</p>
+                      {/* Description */}
+                      {meal.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">"{meal.description}"</p>
                       )}
 
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -485,8 +561,17 @@ export function Nutrition() {
       {showDetailModal && selectedMeal && (
         <MealDetailModal
           meal={selectedMeal}
+          hasDietaryInfo={hasDietaryInfo}
           onClose={handleDetailModalClose}
           onUpdate={handleMealUpdate}
+        />
+      )}
+
+      {showGuidelinesModal && nutritionGuidelines && (
+        <NutritionGuidelinesModal
+          guidelines={nutritionGuidelines}
+          patientName={patientName}
+          onClose={() => setShowGuidelinesModal(false)}
         />
       )}
     </div>

@@ -46,9 +46,15 @@ export interface CollectedFamilyMember {
   relationship: string;
 }
 
+export interface CollectedDietaryInfo {
+  allergies: string[];
+  dietaryRestrictions: string[];
+}
+
 export interface OnboardingCollectedData {
   userName?: string; // The caregiver's name
   patient?: CollectedPatientInfo;
+  dietaryInfo?: CollectedDietaryInfo;
   medications: CollectedMedication[];
   careTasks: CollectedCareTask[];
   familyMembers: CollectedFamilyMember[];
@@ -80,8 +86,19 @@ QUESTION FLOW (one at a time, in this order):
    - If you don't know who they're caring for, ask
    - If you don't know the person's FULL name (first AND last), ask "What's their full name?" → use collect_patient_info tool (MUST have both firstName and lastName)
    - If you don't know their age, ask
-4. MEDICATIONS: Ask "Does [patient name] take any medications you'd like me to help track?"
-   → After they mention one, use collect_medication tool, then ask "Any other medications?"
+4. DIETARY INFO: Ask "Does [patient name] have any food allergies or special dietary needs I should know about?"
+   → If they mention allergies or restrictions, use collect_dietary_info tool
+   → If they say "no" or "none", still call collect_dietary_info with empty arrays to record that you asked
+   → Common allergies: peanuts, tree nuts, shellfish, dairy, eggs, wheat, soy
+   → Common restrictions: low-sodium, diabetic-friendly, gluten-free, vegetarian, soft foods, heart-healthy
+5. MEDICATIONS: Ask "Does [patient name] take any medications you'd like me to help track?"
+   → When they mention a medication:
+     a) If they provided timing info (e.g., "in the morning", "twice a day", "at 8am"),
+        use collect_medication immediately with converted times
+     b) If they did NOT provide timing info, ask: "When does [patient] take [medication name]?"
+        - Wait for their answer before calling collect_medication
+        - Only after getting timing, call collect_medication with the schedule
+   → After adding, ask "Any other medications?"
    → Keep asking until they say no/none/that's it
 5. TASKS & APPOINTMENTS: Ask "Are there any regular appointments or care routines? Things like doctor visits, therapy, or daily activities?"
    → After they mention one, use collect_care_task tool, then ask "Any other appointments or routines?"
@@ -102,6 +119,18 @@ FOLLOW-UP PATTERN:
   User: "No, that's it"
   You: "Great. Now, are there any regular appointments or care routines..."
 
+MEDICATION TIMING EXAMPLES:
+  User: "She takes Aricept"
+  You: "When does she take Aricept? Morning, evening, or another time?"
+  User: "In the morning with breakfast"
+  You: [collect_medication with scheduleTimes: ["08:00"]] "Got it, Aricept added for morning. Any other medications?"
+
+  User: "She takes Metformin twice a day"
+  You: [collect_medication with scheduleTimes: ["08:00", "20:00"]] "Added Metformin for morning and evening. Any others?"
+
+  User: "Aricept at 7am"
+  You: [collect_medication with scheduleTimes: ["07:00"]] "Got it, Aricept at 7am. Any other medications?"
+
 RESPONSE FORMAT:
 - 1-2 sentences acknowledging what they said (with empathy if appropriate)
 - 1 clear question
@@ -119,7 +148,13 @@ EXAMPLE BAD RESPONSE (too many questions):
 DATA TIPS:
 - Estimate DOB from age: if someone is 67 in 2025, their birth year is 2025-67=1958, so use "1958-01-01"
 - Infer gender from "mom/dad", "she/he"
-- Convert times: "morning" → "08:00", "evening" → "18:00", "night" → "21:00", "noon" → "12:00"
+- Time conversions (only use when user HAS provided timing):
+  "morning" / "with breakfast" → "08:00"
+  "noon" / "midday" / "with lunch" → "12:00"
+  "evening" / "with dinner" → "18:00"
+  "night" / "bedtime" → "21:00"
+  "twice a day" → ["08:00", "20:00"]
+  "three times a day" → ["08:00", "14:00", "20:00"]
 
 TASK vs APPOINTMENT DISTINCTION (IMPORTANT):
 - APPOINTMENT: Doctor visits, therapy sessions, scheduled meetings - anything with a specific time and place you need to attend
@@ -131,14 +166,43 @@ TASK vs APPOINTMENT DISTINCTION (IMPORTANT):
   → Example: "Daily walk" → taskType="task", recurrenceType="daily"
   → Example: "Take prescription daily" is a MEDICATION, not a task!
 
-DUPLICATE PREVENTION:
-- The tool results show what you've already collected - CHECK before adding
-- NEVER call collect_care_task twice for the same item
-- If the user mentions "daily walk" once, only add it once
-- If unsure whether something is a duplicate, ask the user
+RECURRING APPOINTMENT DUPLICATE PREVENTION (CRITICAL):
+After calling collect_care_task for a recurring appointment, DO NOT call it again for the same appointment in a different way.
+
+Common mistake to avoid:
+- User says "weekly PT appointment on Wednesdays"
+- You call collect_care_task with "PT appointment"
+- Then you call it AGAIN with "Physical therapy" or "Weekly physical therapy"
+- This creates duplicates!
+
+RULE: For each recurring appointment the user mentions, call collect_care_task EXACTLY ONCE.
+- Check the tool result feedback before calling again
+- If you see a similar appointment type already collected, DO NOT add another one
+- Use consistent naming - if you called it "PT appointment", don't also add "Physical therapy"
+
+EXAMPLES:
+User: "She has PT every Wednesday at 10am"
+You: [collect_care_task with title="PT appointment", dayOfWeek="wednesday", scheduledTime="10:00", recurrenceType="weekly"]
+DONE - do not call collect_care_task again for this appointment
+
+DUPLICATE PREVENTION (READ CAREFULLY):
+After each tool call, you receive feedback showing what's already collected:
+- medications: list of medication names
+- careTasks: list of task titles with dates/times (e.g., "Doctor appointment - Thu at 14:00")
+- familyMembers: list of emails
+
+BEFORE calling collect_care_task or collect_medication:
+1. Check the collectedSoFar feedback from your most recent tool call
+2. Look for semantic matches, not just exact matches:
+   - "Doctor visit" = "Doctor appointment" = "Dr. appt"
+   - "Thursday" could be the same as "12/5" depending on current date
+   - "2pm" = "14:00" = "afternoon appointment"
+3. If you see a potential match: ASK THE USER before adding
+4. If the user re-mentions something already added, acknowledge it: "I already have that one noted!"
 
 WHEN READY:
 Only offer to set up the dashboard AFTER you have:
+- Asked about dietary info (even if they say none)
 - Asked about medications (even if they say none)
 - Asked about care tasks/appointments (even if they say none)
 - Asked about family members (even if they say none)
@@ -281,8 +345,21 @@ class OnboardingAIService {
               success: true,
               collectedSoFar: {
                 patient: updatedData.patient ? `${updatedData.patient.firstName} ${updatedData.patient.lastName}` : null,
+                dietaryInfo: updatedData.dietaryInfo
+                  ? {
+                      allergies: updatedData.dietaryInfo.allergies,
+                      restrictions: updatedData.dietaryInfo.dietaryRestrictions,
+                    }
+                  : null,
                 medications: updatedData.medications.map(m => m.name),
-                careTasks: updatedData.careTasks.map(t => t.title),
+                careTasks: updatedData.careTasks.map(t => {
+                  let desc = t.title;
+                  if (t.dueDate) desc += ` - ${t.dueDate}`;
+                  if (t.scheduledTime) desc += ` at ${t.scheduledTime}`;
+                  if (t.dayOfWeek) desc += ` (${t.dayOfWeek})`;
+                  if (t.recurrenceType) desc += ` [${t.recurrenceType}]`;
+                  return desc;
+                }),
                 familyMembers: updatedData.familyMembers.map(f => f.email),
               }
             }),
@@ -318,6 +395,10 @@ class OnboardingAIService {
 
       case 'collect_patient_info':
         this.handleCollectPatientInfo(input as CollectPatientInfoInput, data);
+        break;
+
+      case 'collect_dietary_info':
+        this.handleCollectDietaryInfo(input, data);
         break;
 
       case 'collect_medication':
@@ -369,6 +450,16 @@ class OnboardingAIService {
     }
   }
 
+  private handleCollectDietaryInfo(
+    input: { allergies?: string[]; dietaryRestrictions?: string[] },
+    data: OnboardingCollectedData
+  ): void {
+    data.dietaryInfo = {
+      allergies: input.allergies || [],
+      dietaryRestrictions: input.dietaryRestrictions || [],
+    };
+  }
+
   private handleCollectMedication(input: CreateMedicationInput, data: OnboardingCollectedData): void {
     // Check for duplicate by name (case-insensitive)
     if (!data.medications.some(m => m.name.toLowerCase() === input.name.toLowerCase())) {
@@ -383,8 +474,35 @@ class OnboardingAIService {
   }
 
   private handleCollectCareTask(input: CreateCareTaskInput, data: OnboardingCollectedData): void {
-    // Check for duplicate by title (case-insensitive)
-    if (data.careTasks.some(t => t.title.toLowerCase() === input.title.toLowerCase())) {
+    // Check for duplicate - for recurring appointments, also check dayOfWeek + recurrenceType
+    const isDuplicate = data.careTasks.some(t => {
+      // Exact title match
+      if (t.title.toLowerCase() === input.title.toLowerCase()) {
+        return true;
+      }
+
+      // For recurring appointments, check if same day + recurrence pattern
+      if (input.recurrenceType && input.recurrenceType !== 'once' &&
+          t.recurrenceType && t.recurrenceType !== 'once') {
+        // Same day of week and same recurrence type = likely duplicate
+        if (t.dayOfWeek === input.dayOfWeek && t.recurrenceType === input.recurrenceType) {
+          // Additional check: same time slot (if both have times)
+          if (t.scheduledTime && input.scheduledTime && t.scheduledTime === input.scheduledTime) {
+            logger.info('Duplicate recurring appointment detected by schedule', {
+              existing: t.title,
+              new: input.title,
+              dayOfWeek: input.dayOfWeek,
+              scheduledTime: input.scheduledTime
+            });
+            return true;
+          }
+        }
+      }
+
+      return false;
+    });
+
+    if (isDuplicate) {
       logger.info('Duplicate care task ignored', { title: input.title });
       return;
     }
@@ -426,6 +544,7 @@ class OnboardingAIService {
     return {
       userName: undefined,
       patient: undefined,
+      dietaryInfo: undefined,
       medications: [],
       careTasks: [],
       familyMembers: [],

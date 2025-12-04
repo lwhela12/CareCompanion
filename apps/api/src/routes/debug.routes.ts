@@ -5,6 +5,23 @@ import { AuthRequest } from '../types';
 
 const router = Router();
 
+// DEV ONLY: Trigger EOD conversation logging (no auth)
+router.post('/api/v1/debug/trigger-eod-logging', async (req, res, next) => {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not available in production' } });
+      return;
+    }
+
+    const { conversationLoggingQueue } = await import('../jobs/queues');
+    const job = await conversationLoggingQueue.add('eod-log-all', { type: 'eod-log-all' });
+
+    res.json({ success: true, message: 'EOD logging job queued', jobId: job.id });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Debug endpoint to check auth
 router.get('/api/v1/debug/auth', authenticate, (req, res) => {
   res.json({

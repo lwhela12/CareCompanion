@@ -42,6 +42,8 @@ import {
   SearchDocumentsInput,
   GetDocumentDetailsInput,
   TriggerDocumentParseInput,
+  UpdatePatientHealthInfoInput,
+  CreateNutritionGuidelinesInput,
   combineDateAndTime,
   recurrenceToRRule,
 } from './ai/tools';
@@ -155,6 +157,25 @@ WHEN TO USE TOOLS:
 - When they ask about documents, records, or uploaded files, use search_documents
 - When they want details about a specific document, use get_document_details
 - When they want to process/parse a pending document, use trigger_document_parse
+- When they want to set up nutrition guidelines, first collect their health info (height, weight, activity level, health conditions) using update_patient_health_info, then create guidelines using create_nutrition_guidelines
+- When updating health info for nutrition, accept imperial or metric units from the user and convert to metric before saving (e.g., 5'6" = 167.6cm, 150 lbs = 68kg)
+
+NUTRITION GUIDELINES:
+When helping set up nutrition guidelines, have a natural CONVERSATIONAL flow - ask ONE question at a time:
+1. You already know ${context.patientName}'s age (from their date of birth) and gender - use these, don't ask again
+2. Start by asking about height (accept feet/inches or cm)
+3. After they answer, ask about weight (accept lbs or kg)
+4. Then ask about activity level in simple terms: "How active is ${context.patientName}? Mostly sitting/resting, light activity like short walks, moderate activity, or quite active?"
+5. Finally ask about any health conditions that might affect diet (diabetes, heart disease, kidney issues, etc.)
+6. After each answer, save what you learned using update_patient_health_info before asking the next question
+7. Once you have everything, calculate and create the guidelines:
+   - BMR (men) = 10 × weight(kg) + 6.25 × height(cm) - 5 × age - 5
+   - BMR (women) = 10 × weight(kg) + 6.25 × height(cm) - 5 × age - 161
+   - Multiply BMR by activity factor: sedentary=1.2, light=1.375, moderate=1.55, active=1.725
+   - Protein: 1.0-1.2g per kg body weight for elderly
+8. Adjust for health conditions (low sodium for heart disease, carb management for diabetes)
+9. Present guidelines as helpful suggestions, not medical advice
+10. Summarize what you've set up in a friendly way
 
 IMPORTANT - TASKS VS APPOINTMENTS:
 - Use taskType: "task" for to-do items (picking up prescriptions, errands, chores)
@@ -503,6 +524,10 @@ ${enhancedContext}`;
           return await this.getDocumentDetails(input, context);
         case 'trigger_document_parse':
           return await this.triggerDocumentParse(input, context);
+        case 'update_patient_health_info':
+          return await this.updatePatientHealthInfo(input, context);
+        case 'create_nutrition_guidelines':
+          return await this.createNutritionGuidelines(input, context);
         default:
           return { success: false, message: `Unknown tool: ${toolName}` };
       }
@@ -613,10 +638,10 @@ ${enhancedContext}`;
     let meetsGuidelines: boolean | null = null;
     let concerns: string[] = [];
 
-    if (input.notes) {
+    if (input.description) {
       try {
         const analysis = await mealAnalysisService.analyzeMealFromDescription({
-          description: input.notes,
+          description: input.description,
           mealType: input.mealType,
         });
         nutritionData = analysis.nutritionData;
@@ -639,7 +664,7 @@ ${enhancedContext}`;
         userId: context.userId,
         mealType: input.mealType,
         consumedAt,
-        notes: input.notes,
+        description: input.description,
         nutritionData: nutritionData ?? undefined,
         meetsGuidelines,
         concerns,
@@ -654,14 +679,14 @@ ${enhancedContext}`;
 
     // Log to journal with nutrition info
     await this.logActivityToJournal(
-      `Logged ${input.mealType.toLowerCase()}: ${input.notes || 'no details'}${nutritionSummary}`,
+      `Logged ${input.mealType.toLowerCase()}: ${input.description || 'no details'}${nutritionSummary}`,
       context,
       'neutral'
     );
 
     return {
       success: true,
-      message: `Logged ${input.mealType.toLowerCase()}${input.notes ? `: ${input.notes}` : ''}${nutritionSummary}`,
+      message: `Logged ${input.mealType.toLowerCase()}${input.description ? `: ${input.description}` : ''}${nutritionSummary}`,
       id: meal.id,
     };
   }
@@ -683,7 +708,7 @@ ${enhancedContext}`;
 
     const updateData: any = {};
     if (input.mealType) updateData.mealType = input.mealType;
-    if (input.notes !== undefined) updateData.notes = input.notes;
+    if (input.description !== undefined) updateData.description = input.description;
 
     await prisma.mealLog.update({
       where: { id: input.mealLogId },
@@ -2274,6 +2299,130 @@ ${enhancedContext}`;
     return {
       success: true,
       message: `Started parsing document: ${document.title}. This may take a few minutes.`,
+    };
+  }
+
+  private async updatePatientHealthInfo(
+    input: UpdatePatientHealthInfoInput,
+    context: ChatContext
+  ): Promise<{ success: boolean; message: string }> {
+    const updateData: any = {};
+
+    if (input.heightCm !== undefined) updateData.heightCm = input.heightCm;
+    if (input.weightKg !== undefined) updateData.weightKg = input.weightKg;
+    if (input.activityLevel !== undefined) updateData.activityLevel = input.activityLevel;
+    if (input.healthConditions !== undefined) updateData.healthConditions = input.healthConditions;
+
+    if (Object.keys(updateData).length === 0) {
+      return { success: false, message: 'No health info provided to update' };
+    }
+
+    await prisma.patient.update({
+      where: { id: context.patientId },
+      data: updateData,
+    });
+
+    const updates: string[] = [];
+    if (input.heightCm) updates.push(`height: ${input.heightCm}cm`);
+    if (input.weightKg) updates.push(`weight: ${input.weightKg}kg`);
+    if (input.activityLevel) updates.push(`activity level: ${input.activityLevel}`);
+    if (input.healthConditions?.length) updates.push(`health conditions: ${input.healthConditions.join(', ')}`);
+
+    logger.info('Updated patient health info', { patientId: context.patientId, updates });
+
+    return {
+      success: true,
+      message: `Updated health info: ${updates.join(', ')}`,
+    };
+  }
+
+  private async createNutritionGuidelines(
+    input: CreateNutritionGuidelinesInput,
+    context: ChatContext
+  ): Promise<{ success: boolean; message: string; id?: string }> {
+    // Check if there's an existing active nutrition recommendation
+    const existingRec = await prisma.recommendation.findFirst({
+      where: {
+        patientId: context.patientId,
+        type: 'DIET',
+        status: { in: ['IN_PROGRESS', 'PENDING', 'ACKNOWLEDGED'] },
+      },
+      include: {
+        nutritionDetails: true,
+      },
+    });
+
+    if (existingRec?.nutritionDetails) {
+      // Update existing nutrition recommendation
+      await prisma.nutritionRecommendation.update({
+        where: { id: existingRec.nutritionDetails.id },
+        data: {
+          dailyCalories: input.dailyCalories,
+          proteinGrams: input.proteinGrams,
+          carbsGrams: input.carbsGrams,
+          fatGrams: input.fatGrams,
+          sodiumMg: input.sodiumMg,
+          goals: input.goals || [],
+          specialInstructions: input.specialInstructions,
+        },
+      });
+
+      logger.info('Updated existing nutrition guidelines', {
+        patientId: context.patientId,
+        nutritionRecId: existingRec.nutritionDetails.id,
+      });
+
+      return {
+        success: true,
+        message: `Updated nutrition guidelines: ${input.dailyCalories} calories, ${input.proteinGrams}g protein daily`,
+        id: existingRec.id,
+      };
+    }
+
+    // Create new recommendation with nutrition details
+    const recommendation = await prisma.recommendation.create({
+      data: {
+        familyId: context.familyId,
+        patientId: context.patientId,
+        type: 'DIET',
+        title: 'Personalized Nutrition Guidelines',
+        description: `Daily targets: ${input.dailyCalories} calories, ${input.proteinGrams}g protein${input.specialInstructions ? `. ${input.specialInstructions}` : ''}`,
+        priority: 'MEDIUM',
+        status: 'IN_PROGRESS',
+        nutritionDetails: {
+          create: {
+            dailyCalories: input.dailyCalories,
+            proteinGrams: input.proteinGrams,
+            carbsGrams: input.carbsGrams,
+            fatGrams: input.fatGrams,
+            sodiumMg: input.sodiumMg,
+            goals: input.goals || [],
+            specialInstructions: input.specialInstructions,
+            restrictions: [],
+            recommendedMealTimes: [],
+          },
+        },
+      },
+    });
+
+    // Log to journal
+    await this.logActivityToJournal(
+      `Set up personalized nutrition guidelines: ${input.dailyCalories} calories, ${input.proteinGrams}g protein daily${input.goals?.length ? `. Goals: ${input.goals.join(', ')}` : ''}`,
+      context,
+      'positive'
+    );
+
+    logger.info('Created nutrition guidelines', {
+      patientId: context.patientId,
+      recommendationId: recommendation.id,
+      dailyCalories: input.dailyCalories,
+      proteinGrams: input.proteinGrams,
+    });
+
+    return {
+      success: true,
+      message: `Created nutrition guidelines: ${input.dailyCalories} calories, ${input.proteinGrams}g protein daily`,
+      id: recommendation.id,
     };
   }
 }

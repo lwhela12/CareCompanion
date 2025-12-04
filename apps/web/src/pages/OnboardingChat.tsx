@@ -12,6 +12,7 @@ import {
   Users,
   User,
   ChevronRight,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { cn, toLocalISOString, startEndOfLocalDay } from '@/lib/utils';
 import { cacheDashboardData } from '@/lib/dashboardCache';
@@ -54,9 +55,15 @@ interface CollectedFamilyMember {
   relationship: string;
 }
 
+interface CollectedDietaryInfo {
+  allergies: string[];
+  dietaryRestrictions: string[];
+}
+
 interface OnboardingCollectedData {
   userName?: string;
   patient?: CollectedPatientInfo;
+  dietaryInfo?: CollectedDietaryInfo;
   medications: CollectedMedication[];
   careTasks: CollectedCareTask[];
   familyMembers: CollectedFamilyMember[];
@@ -126,20 +133,29 @@ export function OnboardingChat() {
     try {
       const token = await getToken();
 
-      // 1. Confirm onboarding (creates family/patient)
+      // Prepare conversation history for the backend
+      const conversationHistory = messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      // 1. Confirm onboarding (creates family/patient and persists conversation)
       const response = await fetch(`${API_URL}/api/v1/onboarding/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ collectedData }),
+        body: JSON.stringify({ collectedData, conversationHistory }),
       });
 
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Failed to complete setup');
       }
+
+      // Get the response with conversationId
+      const confirmResult = await response.json();
 
       // 2. Pre-fetch dashboard data while user sees final message
       const { start, end } = startEndOfLocalDay(new Date());
@@ -169,12 +185,17 @@ export function OnboardingChat() {
         recommendations: [],
       });
 
-      // 4. Store conversation history for the chat widget
-      const conversationHistory = messages.map(m => ({
-        role: m.role,
-        content: m.content,
-      }));
+      // 4. Store conversation data for the chat widget
+      // Save conversation history for display in the chat widget
       localStorage.setItem('ceecee_onboarding_messages', JSON.stringify(conversationHistory));
+
+      // Store the backend conversation ID for continuity
+      // This ensures future messages are added to the same conversation
+      if (confirmResult.conversationId) {
+        localStorage.setItem('ceecee_conversation_id', confirmResult.conversationId);
+      }
+      // Clear stale chat messages (the real messages are in the DB now)
+      localStorage.removeItem('ceecee_chat_messages');
 
       if (collectedData.userName) {
         localStorage.setItem('ceecee_user_name', collectedData.userName);
@@ -354,13 +375,20 @@ export function OnboardingChat() {
 
     try {
       const token = await getToken();
+
+      // Prepare conversation history for the backend
+      const conversationHistory = messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+
       const response = await fetch(`${API_URL}/api/v1/onboarding/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ collectedData }),
+        body: JSON.stringify({ collectedData, conversationHistory }),
       });
 
       if (!response.ok) {
@@ -368,12 +396,18 @@ export function OnboardingChat() {
         throw new Error(data.error || 'Failed to complete setup');
       }
 
-      // Store full conversation history for the chat widget
-      const conversationHistory = messages.map(m => ({
-        role: m.role,
-        content: m.content,
-      }));
+      // Get the response with conversationId
+      const confirmResult = await response.json();
+
+      // Store conversation history for the chat widget display
       localStorage.setItem('ceecee_onboarding_messages', JSON.stringify(conversationHistory));
+
+      // Store the backend conversation ID for continuity
+      if (confirmResult.conversationId) {
+        localStorage.setItem('ceecee_conversation_id', confirmResult.conversationId);
+      }
+      // Clear stale chat messages
+      localStorage.removeItem('ceecee_chat_messages');
 
       if (collectedData.userName) {
         localStorage.setItem('ceecee_user_name', collectedData.userName);
@@ -381,7 +415,9 @@ export function OnboardingChat() {
 
       // Trigger transition animation
       setIsConfirming(false);
-      setIsTransitioning(true);
+
+      // Dispatch event to show the app-level transition overlay
+      window.dispatchEvent(new Event('start-dashboard-transition'));
 
       // Wait for animation to complete, then navigate
       setTimeout(() => {
@@ -543,6 +579,35 @@ export function OnboardingChat() {
               <p className="text-sm text-gray-400">Not yet provided</p>
             )}
           </div>
+
+          {/* Dietary Info */}
+          {collectedData.dietaryInfo && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <UtensilsCrossed className="h-4 w-4" />
+                Dietary Info
+                <Check className="h-4 w-4 text-green-500 ml-auto" />
+              </div>
+              <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+                {collectedData.dietaryInfo.allergies.length > 0 && (
+                  <p className="dark:text-gray-100">
+                    <span className="font-medium">Allergies:</span>{' '}
+                    {collectedData.dietaryInfo.allergies.join(', ')}
+                  </p>
+                )}
+                {collectedData.dietaryInfo.dietaryRestrictions.length > 0 && (
+                  <p className="dark:text-gray-100">
+                    <span className="font-medium">Restrictions:</span>{' '}
+                    {collectedData.dietaryInfo.dietaryRestrictions.join(', ')}
+                  </p>
+                )}
+                {collectedData.dietaryInfo.allergies.length === 0 &&
+                  collectedData.dietaryInfo.dietaryRestrictions.length === 0 && (
+                    <p className="text-gray-500 dark:text-gray-400">None specified</p>
+                  )}
+              </div>
+            </div>
+          )}
 
           {/* Medications */}
           <div className="mb-4">

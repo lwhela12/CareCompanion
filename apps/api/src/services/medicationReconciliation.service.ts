@@ -246,6 +246,7 @@ export class MedicationReconciliationService {
    * Critical medications get higher priority
    */
   private determinePriorityForNewMedication(medicationName: string): RecommendationPriority {
+    if (!medicationName) return 'MEDIUM';
     const name = medicationName.toLowerCase();
 
     // Critical medications (cardiovascular, diabetes, etc.)

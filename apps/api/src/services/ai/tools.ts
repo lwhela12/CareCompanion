@@ -28,14 +28,14 @@ export interface DeleteJournalEntryInput {
 // Nutrition/Meal tools
 export interface LogMealInput {
   mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK' | 'OTHER';
-  notes?: string;
+  description?: string;
   consumedAt?: string; // ISO datetime
 }
 
 export interface UpdateMealInput {
   mealLogId: string;
   mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK' | 'OTHER';
-  notes?: string;
+  description?: string;
 }
 
 export interface DeleteMealInput {
@@ -226,6 +226,24 @@ export interface TriggerDocumentParseInput {
   documentId: string;
 }
 
+// Nutrition Guidelines tools
+export interface UpdatePatientHealthInfoInput {
+  heightCm?: number;
+  weightKg?: number;
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active';
+  healthConditions?: string[];
+}
+
+export interface CreateNutritionGuidelinesInput {
+  dailyCalories: number;
+  proteinGrams: number;
+  carbsGrams?: number;
+  fatGrams?: number;
+  sodiumMg?: number;
+  goals?: string[];
+  specialInstructions?: string;
+}
+
 export interface CollectUserNameInput {
   name: string;
 }
@@ -324,7 +342,7 @@ export const logMealTool: Anthropic.Tool = {
         enum: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'OTHER'],
         description: 'Type of meal: BREAKFAST (morning), LUNCH (midday), DINNER (evening), SNACK, or OTHER',
       },
-      notes: {
+      description: {
         type: 'string',
         description: 'Detailed description of what was eaten, including portion sizes when mentioned. Be specific about all food items (e.g., "1 cup oatmeal with sliced banana and 1 tbsp honey, glass of orange juice"). The more detail provided, the more accurate the nutrition estimates.',
       },
@@ -353,7 +371,7 @@ export const updateMealTool: Anthropic.Tool = {
         enum: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'OTHER'],
         description: 'New meal type if changing',
       },
-      notes: {
+      description: {
         type: 'string',
         description: 'New meal description if changing',
       },
@@ -1364,6 +1382,86 @@ export const readyForDashboardTool: Anthropic.Tool = {
   },
 };
 
+// ==================== Nutrition Guidelines Tools ====================
+
+// Update Patient Health Info Tool
+export const updatePatientHealthInfoTool: Anthropic.Tool = {
+  name: 'update_patient_health_info',
+  description:
+    "Update patient health information including height, weight, activity level, and health conditions. Use this when helping set up nutrition guidelines. Accept height/weight in any unit the user provides - convert to metric before calling. For example: 5'6\" = 167.6cm, 150 lbs = 68kg.",
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      heightCm: {
+        type: 'number',
+        description:
+          "Height in centimeters. Convert from feet/inches if user provides imperial (e.g., 5'6\" = 167.6cm, 5'10\" = 177.8cm)",
+      },
+      weightKg: {
+        type: 'number',
+        description:
+          'Weight in kilograms. Convert from pounds if user provides imperial (e.g., 150 lbs = 68kg, 180 lbs = 81.6kg)',
+      },
+      activityLevel: {
+        type: 'string',
+        enum: ['sedentary', 'light', 'moderate', 'active'],
+        description:
+          'Activity level: sedentary (little/no exercise), light (1-3 days/week), moderate (3-5 days/week), active (6-7 days/week). For elderly patients, sedentary or light is most common.',
+      },
+      healthConditions: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Health conditions affecting nutrition (e.g., diabetes, heart disease, kidney disease, high blood pressure, high cholesterol)',
+      },
+    },
+    required: [],
+  },
+};
+
+// Create Nutrition Guidelines Tool
+export const createNutritionGuidelinesTool: Anthropic.Tool = {
+  name: 'create_nutrition_guidelines',
+  description:
+    "Create personalized nutrition guidelines for a patient based on their health info. Call this after collecting height, weight, and health conditions. Use the Mifflin-St Jeor equation for seniors to calculate caloric needs: BMR (men) = 10×weight(kg) + 6.25×height(cm) - 5×age - 5; BMR (women) = 10×weight(kg) + 6.25×height(cm) - 5×age - 161. Multiply by activity factor: sedentary=1.2, light=1.375, moderate=1.55, active=1.725. Protein: 1.0-1.2g per kg body weight for elderly.",
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      dailyCalories: {
+        type: 'number',
+        description: 'Recommended daily calories calculated using Mifflin-St Jeor equation',
+      },
+      proteinGrams: {
+        type: 'number',
+        description: 'Recommended daily protein in grams (typically 1.0-1.2g per kg body weight for elderly)',
+      },
+      carbsGrams: {
+        type: 'number',
+        description: 'Recommended daily carbs in grams (optional, typically 45-65% of calories)',
+      },
+      fatGrams: {
+        type: 'number',
+        description: 'Recommended daily fat in grams (optional, typically 20-35% of calories)',
+      },
+      sodiumMg: {
+        type: 'number',
+        description: 'Recommended daily sodium in mg (use 1500-2000mg for heart conditions or high blood pressure)',
+      },
+      goals: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Nutrition goals like "maintain-weight", "increase-protein", "heart-healthy", "diabetic-friendly", "low-sodium"',
+      },
+      specialInstructions: {
+        type: 'string',
+        description: 'Any special dietary notes or instructions based on health conditions',
+      },
+    },
+    required: ['dailyCalories', 'proteinGrams'],
+  },
+};
+
 // ==================== Tool Sets ====================
 
 // Tools for in-app chat (execution mode - immediately creates/updates data)
@@ -1409,12 +1507,40 @@ export const chatTools: Anthropic.Tool[] = [
   searchDocumentsTool,
   getDocumentDetailsTool,
   triggerDocumentParseTool,
+  // Nutrition Guidelines tools
+  updatePatientHealthInfoTool,
+  createNutritionGuidelinesTool,
 ];
+
+// Collect Dietary Info Tool (for onboarding)
+export const collectDietaryInfoTool: Anthropic.Tool = {
+  name: 'collect_dietary_info',
+  description:
+    "Collect patient food allergies and dietary restrictions. Call this when the user mentions any food allergies, dietary restrictions, or special diets. If they say 'none' or 'no restrictions', still call this tool with empty arrays to record that dietary info was explicitly asked.",
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      allergies: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Food allergies (e.g., peanuts, shellfish, dairy, eggs, wheat, soy)',
+      },
+      dietaryRestrictions: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Dietary restrictions or special diets (e.g., low-sodium, diabetic-friendly, gluten-free, vegetarian, soft foods, heart-healthy)',
+      },
+    },
+    required: [],
+  },
+};
 
 // Tools for onboarding (collection mode - gathers data for confirmation)
 export const onboardingTools: Anthropic.Tool[] = [
   collectUserNameTool,
   collectPatientInfoTool,
+  collectDietaryInfoTool,
   collectMedicationTool,
   collectCareTaskTool,
   collectFamilyMemberTool,

@@ -220,6 +220,7 @@ export class SmartMatchingService {
    * Removes common suffixes, converts to lowercase, removes extra spaces
    */
   private normalizeMedicationName(name: string): string {
+    if (!name) return '';
     return name
       .toLowerCase()
       .replace(/\b(tablet|capsule|pill|mg|mcg|ml|extended release|er|xr|sr)\b/gi, '')

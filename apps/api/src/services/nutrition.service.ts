@@ -1,4 +1,4 @@
-import { PrismaClient, MealLog, MealTemplate, NutritionRecommendation, MealType } from '@prisma/client';
+import { PrismaClient, MealLog, MealTemplate, NutritionRecommendation, MealType, AnalysisStatus } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
@@ -8,13 +8,14 @@ interface CreateMealLogParams {
   userId: string;
   mealType: MealType;
   consumedAt?: Date;
-  notes?: string;
+  description?: string;
   photoUrls: string[];
   voiceNoteUrl?: string;
   templateId?: string;
   nutritionData?: any;
   meetsGuidelines?: boolean;
   concerns?: string[];
+  analysisStatus?: AnalysisStatus;
 }
 
 interface CreateMealTemplateParams {
@@ -78,12 +79,13 @@ export class NutritionService {
             userId: params.userId,
             mealType: params.mealType,
             consumedAt: params.consumedAt || new Date(),
-            notes: params.notes,
+            description: params.description,
             photoUrls: params.photoUrls,
             voiceNoteUrl: params.voiceNoteUrl,
             nutritionData: params.nutritionData || {},
             meetsGuidelines: params.meetsGuidelines,
             concerns: params.concerns || [],
+            analysisStatus: params.analysisStatus || 'NONE',
             templateId: params.templateId,
           },
           include: {
@@ -293,7 +295,7 @@ export class NutritionService {
 
       if (data.mealType) updateData.mealType = data.mealType;
       if (data.consumedAt) updateData.consumedAt = data.consumedAt;
-      if (data.notes !== undefined) updateData.notes = data.notes;
+      if (data.description !== undefined) updateData.description = data.description;
       if (data.photoUrls) updateData.photoUrls = data.photoUrls;
       if (data.voiceNoteUrl !== undefined) updateData.voiceNoteUrl = data.voiceNoteUrl;
       if (data.nutritionData) updateData.nutritionData = data.nutritionData;

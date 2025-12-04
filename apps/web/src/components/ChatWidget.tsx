@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo, memo, useTransition, type ReactNode, type RefObject } from 'react';
-import { X, Loader2, Send, ExternalLink, Plus, History, ChevronLeft, Paperclip, Image as ImageIcon, FileText, Check } from 'lucide-react';
+import { X, Loader2, Send, ExternalLink, Plus, History, ChevronLeft, Paperclip, Image as ImageIcon, FileText, Check, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -206,6 +206,7 @@ export function ChatWidget() {
   const [citationError, setCitationError] = useState('');
   const [citationData, setCitationData] = useState<any>(null);
   const [savedDocuments, setSavedDocuments] = useState<SavedDocumentNotification[]>([]);
+  const [isSavingToJournal, setIsSavingToJournal] = useState(false);
 
   // Auto-open chat when coming from onboarding (?welcome=true)
   useEffect(() => {
@@ -316,6 +317,40 @@ export function ChatWidget() {
       setMessages([]);
     }
     setShowHistory(false);
+  };
+
+  // Save current conversation to journal
+  const handleSaveToJournal = async () => {
+    if (!conversationId || isSavingToJournal) return;
+    setIsSavingToJournal(true);
+    try {
+      const token = await getAuthToken();
+      const resp = await fetch(`${API_URL}/api/v1/conversations/${conversationId}/log-to-journal`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resp.ok) {
+        // Show success message in chat
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Conversation saved to journal!'
+        }]);
+      } else {
+        const error = await resp.json();
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Could not save: ${error.error?.message || 'Already saved or no messages'}`
+        }]);
+      }
+    } catch (e) {
+      console.error('Failed to save to journal', e);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Failed to save conversation. Please try again.'
+      }]);
+    } finally {
+      setIsSavingToJournal(false);
+    }
   };
 
   // Show greeting or load onboarding messages when widget opens with no messages
@@ -754,6 +789,15 @@ export function ChatWidget() {
                   </button>
                 </div>
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={handleSaveToJournal}
+                    disabled={!conversationId || isSavingToJournal}
+                    className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-slate-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Save to journal"
+                    title="Save conversation to journal"
+                  >
+                    {isSavingToJournal ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+                  </button>
                   <button
                     onClick={startNewConversation}
                     className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-slate-700 rounded"

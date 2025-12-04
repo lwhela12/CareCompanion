@@ -48,6 +48,7 @@ export const QUEUE_NAMES = {
   SUMMARY_GENERATION: 'summary-generation',
   PATTERN_DETECTION: 'pattern-detection',
   CONVERSATION_LOGGING: 'conversation-logging',
+  MEAL_ANALYSIS: 'meal-analysis',
 } as const;
 
 // Create queues
@@ -56,6 +57,7 @@ export const documentQueue = new Queue(QUEUE_NAMES.DOCUMENT_PROCESSING, queueOpt
 export const summaryQueue = new Queue(QUEUE_NAMES.SUMMARY_GENERATION, queueOptions);
 export const patternQueue = new Queue(QUEUE_NAMES.PATTERN_DETECTION, queueOptions);
 export const conversationLoggingQueue = new Queue(QUEUE_NAMES.CONVERSATION_LOGGING, queueOptions);
+export const mealAnalysisQueue = new Queue(QUEUE_NAMES.MEAL_ANALYSIS, queueOptions);
 
 // Graceful shutdown
 export async function closeQueues() {
@@ -66,6 +68,7 @@ export async function closeQueues() {
     summaryQueue.close(),
     patternQueue.close(),
     conversationLoggingQueue.close(),
+    mealAnalysisQueue.close(),
   ]);
   logger.info('All queues closed');
 }

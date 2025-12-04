@@ -79,7 +79,12 @@ Respond in JSON format:
 
       const content = response.content[0];
       if (content.type === 'text') {
-        const result = JSON.parse(content.text);
+        // Strip markdown code blocks if present (```json ... ```)
+        let jsonText = content.text.trim();
+        if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+        }
+        const result = JSON.parse(jsonText);
         return {
           summary: result.summary,
           topics: result.topics || [],

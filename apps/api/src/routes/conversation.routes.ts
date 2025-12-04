@@ -7,7 +7,32 @@ import { validate } from '../middleware/validate';
 
 const router = Router();
 
-// All routes require authentication
+// DEV ONLY: Manually trigger EOD conversation logging for testing (no auth required)
+router.post('/trigger-eod-logging', async (req, res, next) => {
+  try {
+    // Only allow in development
+    if (process.env.NODE_ENV === 'production') {
+      res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'Not available in production' },
+      });
+      return;
+    }
+
+    // Import and queue the EOD job
+    const { conversationLoggingQueue } = await import('../jobs/queues');
+    const job = await conversationLoggingQueue.add('eod-log-all', { type: 'eod-log-all' });
+
+    res.json({
+      success: true,
+      message: 'EOD logging job queued',
+      jobId: job.id,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// All routes below require authentication
 router.use(authenticate);
 
 // Create a new conversation

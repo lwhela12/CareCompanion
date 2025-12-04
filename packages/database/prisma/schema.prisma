@@ -115,6 +115,12 @@ model Patient {
   dateOfBirth         DateTime               @map("date_of_birth") @db.Date
   gender              String
   medicalRecordNumber String?                @map("medical_record_number")
+  allergies           String[]               @default([])
+  dietaryRestrictions String[]               @default([]) @map("dietary_restrictions")
+  heightCm            Float?                 @map("height_cm")
+  weightKg            Float?                 @map("weight_kg")
+  activityLevel       String?                @map("activity_level")
+  healthConditions    String[]               @default([]) @map("health_conditions")
   createdAt           DateTime               @default(now()) @map("created_at")
   checklistItems      PatientChecklistItem[]
   insights            Insight[]
@@ -505,6 +511,14 @@ enum ParsingStatus {
   FAILED     @map("failed")
 }
 
+enum AnalysisStatus {
+  NONE       @map("none")
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  FAILED     @map("failed")
+}
+
 enum InsightSeverity {
   INFO    @map("info")
   WARNING @map("warning")
@@ -679,12 +693,13 @@ model MealLog {
   userId          String        @map("user_id")
   mealType        MealType      @map("meal_type")
   consumedAt      DateTime      @default(now()) @map("consumed_at")
-  notes           String?
+  description     String?
   photoUrls       String[]      @map("photo_urls")
   voiceNoteUrl    String?       @map("voice_note_url")
   nutritionData   Json?         @map("nutrition_data")
   meetsGuidelines Boolean?      @map("meets_guidelines")
   concerns        String[]      @default([])
+  analysisStatus  AnalysisStatus @default(NONE) @map("analysis_status")
   journalEntryId  String?       @unique @map("journal_entry_id")
   templateId      String?       @map("template_id")
   createdAt       DateTime      @default(now()) @map("created_at")

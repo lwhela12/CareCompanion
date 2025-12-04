@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import {
   X,
-  Upload,
   Camera,
   Loader2,
   Utensils,
@@ -51,7 +50,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
   const [formData, setFormData] = useState({
     mealType: 'LUNCH',
     consumedAt: formatLocalDateTime(), // YYYY-MM-DDTHH:MM format in local time
-    notes: '',
+    description: '',
     templateId: '',
     analyzeWithAI: true,
   });
@@ -189,10 +188,10 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
         patientId,
         mealType: formData.mealType,
         consumedAt: toLocalISOString(new Date(formData.consumedAt)),
-        notes: formData.notes || undefined,
+        description: formData.description || undefined,
         photoUrls: uploadedPhotos,
         templateId: formData.templateId || undefined,
-        analyzeWithAI: formData.analyzeWithAI && uploadedPhotos.length > 0,
+        analyzeWithAI: formData.analyzeWithAI && !!(formData.description.trim() || uploadedPhotos.length > 0),
       };
 
       await onLog(mealData);
@@ -207,21 +206,21 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <Utensils className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+              <Utensils className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Log Meal</h2>
-              <p className="text-sm text-gray-600">Track what was eaten</p>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Log Meal</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Track what was eaten</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -231,7 +230,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
           {/* Template Selection */}
           {templates.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Quick Select Template (Optional)
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -243,12 +242,12 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
                     className={cn(
                       'p-3 border rounded-lg text-left transition-all',
                       formData.templateId === template.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                        : 'border-gray-200 hover:border-gray-300 dark:border-slate-600 dark:hover:border-slate-500'
                     )}
                   >
-                    <p className="text-sm font-medium text-gray-900">{template.name}</p>
-                    <p className="text-xs text-gray-500">{template.mealType.toLowerCase()}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{template.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{template.mealType.toLowerCase()}</p>
                   </button>
                 ))}
               </div>
@@ -257,7 +256,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
 
           {/* Meal Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Meal Type *
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -270,7 +269,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
                     'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                     formData.mealType === type.value
                       ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600'
                   )}
                 >
                   {type.label}
@@ -281,7 +280,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
 
           {/* Time */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Time Consumed
             </label>
             <div className="relative">
@@ -290,14 +289,28 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
                 type="datetime-local"
                 value={formData.consumedAt}
                 onChange={(e) => updateFormData('consumedAt', e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
 
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => updateFormData('description', e.target.value)}
+              placeholder="Describe what was eaten (e.g., grilled chicken breast with steamed vegetables and rice)..."
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100 dark:placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+
           {/* Photo Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Photos (Optional, up to 5)
             </label>
 
@@ -308,8 +321,8 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
               className={cn(
                 'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
                 isUploading
-                  ? 'border-blue-400 bg-blue-50'
-                  : 'border-gray-300 hover:border-gray-400'
+                  ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-gray-300 hover:border-gray-400 dark:border-slate-600 dark:hover:border-slate-500'
               )}
             >
               <input
@@ -324,15 +337,15 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
               {isUploading ? (
                 <div className="flex flex-col items-center">
                   <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-3" />
-                  <p className="text-sm text-gray-600">Uploading photos...</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Uploading photos...</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center">
-                  <Camera className="w-12 h-12 text-gray-400 mb-3" />
-                  <p className="text-sm text-gray-900 font-medium mb-1">
+                  <Camera className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
+                  <p className="text-sm text-gray-900 dark:text-gray-100 font-medium mb-1">
                     Drag & drop photos or click to browse
                   </p>
-                  <p className="text-xs text-gray-500 mb-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                     Up to 5 photos, max 10MB each
                   </p>
                   <button
@@ -354,7 +367,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
                     <img
                       src={preview}
                       alt={`Photo ${index + 1}`}
-                      className="w-full h-20 object-cover rounded border border-gray-200"
+                      className="w-full h-20 object-cover rounded border border-gray-200 dark:border-slate-600"
                     />
                     <button
                       type="button"
@@ -370,14 +383,14 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
           </div>
 
           {/* AI Analysis Toggle */}
-          {uploadedPhotos.length > 0 && (
-            <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          {(formData.description.trim() || uploadedPhotos.length > 0) && (
+            <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <div className="flex items-center space-x-3">
-                <Sparkles className="w-5 h-5 text-blue-600" />
+                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">AI Meal Analysis</p>
-                  <p className="text-xs text-gray-600">
-                    Automatically analyze nutrition, detect concerns, and check guidelines
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">AI Nutrition Analysis</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Estimate calories and macros from your description or photos
                   </p>
                 </div>
               </div>
@@ -388,39 +401,25 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
                   onChange={(e) => updateFormData('analyzeWithAI', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           )}
 
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Notes (Optional)
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => updateFormData('notes', e.target.value)}
-              placeholder="Add any notes about the meal, concerns, or observations..."
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            />
-          </div>
-
           {/* Error Message */}
           {error && (
-            <div className="flex items-start space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="flex items-start space-x-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-slate-700">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               disabled={isSubmitting || isUploading}
             >
               Cancel
@@ -431,7 +430,7 @@ export function LogMealModal({ patientId, templates, onClose, onLog }: LogMealMo
               className={cn(
                 'px-4 py-2 rounded-lg text-white font-medium transition-colors flex items-center space-x-2',
                 isSubmitting || isUploading
-                  ? 'bg-gray-400 cursor-not-allowed'
+                  ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
               )}
             >

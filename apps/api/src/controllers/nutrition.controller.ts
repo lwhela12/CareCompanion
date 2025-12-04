@@ -1,20 +1,21 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma, MealType } from '@carecompanion/database';
+import { AnalysisStatus } from '@prisma/client';
 import { ApiError } from '../middleware/error';
 import { ErrorCodes } from '@carecompanion/shared';
 import { AuthRequest } from '../types';
 import { nutritionService } from '../services/nutrition.service';
-import { mealAnalysisService } from '../services/ai/mealAnalysis.service';
 import { s3Service } from '../services/s3.service';
 import { logger } from '../utils/logger';
+import { queueMealAnalysis } from '../jobs';
 
 // Validation schemas
 const createMealLogSchema = z.object({
   patientId: z.string().uuid(),
   mealType: z.enum(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'OTHER']),
-  consumedAt: z.string().datetime().optional(),
-  notes: z.string().max(1000).optional(),
+  consumedAt: z.string().datetime({ offset: true }).optional(),
+  description: z.string().max(1000).optional(),
   photoUrls: z.array(z.string().url()).max(5).default([]),
   voiceNoteUrl: z.string().url().optional(),
   templateId: z.string().uuid().optional(),
@@ -23,8 +24,8 @@ const createMealLogSchema = z.object({
 
 const updateMealLogSchema = z.object({
   mealType: z.enum(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'OTHER']).optional(),
-  consumedAt: z.string().datetime().optional(),
-  notes: z.string().max(1000).optional(),
+  consumedAt: z.string().datetime({ offset: true }).optional(),
+  description: z.string().max(1000).optional(),
   photoUrls: z.array(z.string().url()).max(5).optional(),
   voiceNoteUrl: z.string().url().optional(),
   nutritionData: z
@@ -110,9 +111,39 @@ export class NutritionController {
       filters.offset = parseInt(offset);
     }
 
-    const mealLogs = await nutritionService.getMealLogsByPatient(patientId, filters);
+    // Fetch meal logs, patient dietary info, and nutrition guidelines in parallel
+    const [mealLogs, patient, activeGuidelines] = await Promise.all([
+      nutritionService.getMealLogsByPatient(patientId, filters),
+      prisma.patient.findUnique({
+        where: { id: patientId },
+        select: { allergies: true, dietaryRestrictions: true },
+      }),
+      nutritionService.getActiveNutritionRecommendation(patientId),
+    ]);
 
-    res.json({ mealLogs });
+    // Determine if patient has dietary info set (for conditional concerns display)
+    const hasDietaryInfo =
+      (patient?.allergies?.length || 0) > 0 || (patient?.dietaryRestrictions?.length || 0) > 0;
+
+    // Determine if patient has nutrition guidelines set
+    const hasNutritionGuidelines = activeGuidelines !== null;
+
+    // Build nutrition guidelines object for frontend
+    const nutritionGuidelines = activeGuidelines
+      ? {
+          dailyCalories: activeGuidelines.dailyCalories,
+          proteinGrams: activeGuidelines.proteinGrams,
+          carbsGrams: activeGuidelines.carbsGrams,
+          fatGrams: activeGuidelines.fatGrams,
+          sodiumMg: activeGuidelines.sodiumMg,
+          goals: activeGuidelines.goals,
+          restrictions: activeGuidelines.restrictions,
+          specialInstructions: activeGuidelines.specialInstructions,
+          updatedAt: activeGuidelines.updatedAt,
+        }
+      : null;
+
+    res.json({ mealLogs, hasDietaryInfo, hasNutritionGuidelines, nutritionGuidelines });
   }
 
   /**
@@ -153,63 +184,47 @@ export class NutritionController {
       throw new ApiError(ErrorCodes.NOT_FOUND, 'User not found', 404);
     }
 
-    let analysisResult = null;
+    // Determine if we should queue AI analysis
+    const shouldAnalyze = data.analyzeWithAI && (data.photoUrls.length > 0 || data.description?.trim());
 
-    // Run AI analysis if requested and photos provided
-    if (data.analyzeWithAI && data.photoUrls.length > 0) {
-      try {
-        logger.info('Running AI meal analysis', {
-          patientId,
-          photoCount: data.photoUrls.length,
-        });
-
-        // Get active nutrition recommendation for this patient
-        const nutritionGoals = await nutritionService.getActiveNutritionRecommendation(patientId);
-
-        // Analyze meal with GPT-5.1 Vision
-        if (data.photoUrls.length === 1) {
-          analysisResult = await mealAnalysisService.analyzeMealFromPhoto({
-            photoUrl: data.photoUrls[0],
-            nutritionGoals,
-            mealType: data.mealType as MealType,
-          });
-        } else {
-          analysisResult = await mealAnalysisService.analyzeMultiplePhotos({
-            photoUrls: data.photoUrls,
-            nutritionGoals,
-            mealType: data.mealType as MealType,
-          });
-        }
-
-        logger.info('AI meal analysis completed', {
-          confidence: analysisResult.confidence,
-          foodItems: analysisResult.nutritionData.foodItems.length,
-          concerns: analysisResult.concerns.length,
-        });
-      } catch (error) {
-        logger.error('AI meal analysis failed, continuing without analysis:', error);
-        // Continue without AI analysis rather than failing the entire request
-      }
-    }
-
-    // Create meal log with analysis results
+    // Create meal log immediately (don't wait for AI analysis)
     const mealLog = await nutritionService.createMealLog({
       patientId: data.patientId,
       userId: user.id,
       mealType: data.mealType as MealType,
       consumedAt: data.consumedAt ? new Date(data.consumedAt) : undefined,
-      notes: data.notes,
+      description: data.description,
       photoUrls: data.photoUrls,
       voiceNoteUrl: data.voiceNoteUrl,
       templateId: data.templateId,
-      nutritionData: analysisResult?.nutritionData,
-      meetsGuidelines: analysisResult?.meetsGuidelines,
-      concerns: analysisResult?.concerns,
+      analysisStatus: shouldAnalyze ? AnalysisStatus.PENDING : AnalysisStatus.NONE,
     });
+
+    // Queue AI analysis in the background
+    if (shouldAnalyze) {
+      try {
+        await queueMealAnalysis({
+          mealLogId: mealLog.id,
+          patientId: data.patientId,
+          photoUrls: data.photoUrls,
+          description: data.description,
+          mealType: data.mealType,
+        });
+
+        logger.info('Meal analysis queued', {
+          mealLogId: mealLog.id,
+          photoCount: data.photoUrls.length,
+          hasDescription: !!data.description?.trim(),
+        });
+      } catch (error) {
+        logger.error('Failed to queue meal analysis', { mealLogId: mealLog.id, error });
+        // Don't fail the request - the meal is logged, analysis just won't happen
+      }
+    }
 
     res.status(201).json({
       mealLog,
-      analysis: analysisResult,
+      analysis: null, // Analysis will be available later
     });
   }
 
@@ -278,7 +293,7 @@ export class NutritionController {
     const updateData: any = {};
     if (data.mealType) updateData.mealType = data.mealType;
     if (data.consumedAt) updateData.consumedAt = new Date(data.consumedAt);
-    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.description !== undefined) updateData.description = data.description;
     if (data.photoUrls) updateData.photoUrls = data.photoUrls;
     if (data.voiceNoteUrl !== undefined) updateData.voiceNoteUrl = data.voiceNoteUrl;
 
